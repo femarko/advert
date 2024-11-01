@@ -12,7 +12,20 @@ Session = sessionmaker(bind=engine)
 class Base(DeclarativeBase):
     pass
 
-class Adv(Base):
+
+class User(Base):
+
+    __tablename__ = 'user'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    surname: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    password: Mapped[str] = mapped_column(String(100), unique=False, nullable=False, index=False)
+    registration_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Advertisement(Base):
 
     __tablename__ = 'adv'
 
@@ -21,6 +34,7 @@ class Adv(Base):
     description: Mapped[str] = mapped_column(index=True, unique=False, nullable=False)
     creation_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     author: Mapped[str] = mapped_column(String(200))
+
 
 Base.metadata.create_all(bind=engine)
 

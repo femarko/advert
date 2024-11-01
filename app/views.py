@@ -1,20 +1,71 @@
+from typing import Type, TypeVar
+
 from flask import request, jsonify, Response
 from flask.views import MethodView
 from sqlalchemy.exc import IntegrityError
 
 from app import adv
 from app.error_handlers import HttpError
-from app.models import Session, Adv
+from app import models
+
+
+@adv.before_request
+def before_request() -> None:
+    session = models.Session()
+    request.session = session
+
+
+@adv.after_request
+def after_request(response: Response) -> Response:
+    request.session.close()
+    return response
+
+
+ModelClass = TypeVar("ModelClass", bound=models.Base)
+
+
+def get_model_instance(model_class: Type[ModelClass], instance_id: int) -> ModelClass:
+    model_instance = request.session.get(model_class, instance_id)
+    if model_instance is None:
+        raise HttpError(404, "not found")
+    return model_instance
+
+
+def add_model_instance(model_instance: ModelClass) -> ModelClass:
+    try:
+        request.session.add(model_instance)
+        request.session.commit()
+    except IntegrityError as err:
+        raise HttpError(409, f"{str(err)}")
+    return model_instance
+
+
+class UserView(MethodView):
+
+    def session(self) -> models.Session:
+        return request.session
+
+    def get(self):
+        pass
+
+    def post(self):
+        pass
+
+    def patch(self):
+        pass
+
+    def delete(self):
+        pass
 
 
 class AdvView(MethodView):
 
     @property
-    def session(self) -> Session:
+    def session(self) -> models.Session:
         return request.session
 
     def get(self, adv_id: int):
-        adv = get_adv(adv_id)
+        adv: models.Advertisement = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
         return jsonify(
             {
                 "id": adv.id,
@@ -25,20 +76,20 @@ class AdvView(MethodView):
             }
         )
 
-    # @adv.route("/adv", methods=["POST"])
     def post(self):
         adv_data = request.json
-        new_adv = Adv(**adv_data)
-        self.session.add(new_adv)
-        self.session.commit()
+        new_adv = models.Advertisement(**adv_data)
+        add_model_instance(model_instance=new_adv)
+        # self.session.add(new_adv)
+        # self.session.commit()
         return jsonify({'id': new_adv.id})
 
     def patch(self, adv_id: int):
-        adv = get_adv(adv_id)
+        adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
         adv_data = request.json
         for key, value in adv_data.items():
             setattr(adv, key, value)
-        adv = add_adv(adv)
+        adv = add_model_instance(model_instance=adv)
         return jsonify(
             {
                 "modified data":
@@ -53,7 +104,7 @@ class AdvView(MethodView):
         )
 
     def delete(self, adv_id: int):
-        adv = get_adv(adv_id)
+        adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
         adv_params = {
             "id": adv.id,
             "title": adv.title,
@@ -66,29 +117,3 @@ class AdvView(MethodView):
         return jsonify({"deleted": adv_params})
 
 
-def get_adv(adv_id: int):
-    adv = request.session.get(Adv, adv_id)
-    if adv is None:
-        raise HttpError(404, "advertisement not found")
-    return adv
-
-
-def add_adv(adv: Adv):
-    try:
-        request.session.add(adv)
-        request.session.commit()
-    except IntegrityError as err:
-        raise HttpError(409, "advertisement already exists")
-    return adv
-
-
-@adv.before_request
-def before_request() -> None:
-    session = Session()
-    request.session = session
-
-
-@adv.after_request
-def after_request(response: Response) -> Response:
-    request.session.close()
-    return response
