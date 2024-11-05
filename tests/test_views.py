@@ -1,7 +1,13 @@
 import pytest
 import sqlalchemy
+from flask import url_for
 
 from app import models, pass_hashing
+
+
+@pytest.fixture(scope="function", autouse=True)
+def register_urls():
+    from app import views
 
 
 @pytest.mark.parametrize(
@@ -46,7 +52,7 @@ def test_create_adv(test_client, session_maker, engine, adv_params, adv_id):
     assert data_from_db[4] == adv_params["user_id"]
 
 
-def test_get_user_data(test_client, session_maker, base_url):
+def test_get_user_data(test_client, session_maker):
     response = test_client.get("http://127.0.0.1:5000/users/1/")
     session = session_maker
     with session() as sess:
@@ -111,6 +117,19 @@ def test_get_related_advs(test_client, session_maker):
                               "description": data_from_db[2],
                               "creation_date": data_from_db[3].isoformat(),
                               "user_id": data_from_db[4]}]
+
+
+def test_get_related_user(test_client, session_maker):
+    response = test_client.get("http://127.0.0.1:5000/advertisements/1/user")
+    session = session_maker
+    with session() as sess:
+        data_from_db = \
+            sess.execute(sqlalchemy.text('SELECT id, name, email, registration_date FROM "user" WHERE id = 1')).first()
+    assert response.status_code == 200
+    assert response.json == {"id": data_from_db[0],
+                             "name": data_from_db[1],
+                             "email": data_from_db[2],
+                             "registration_date": data_from_db[3].isoformat()}
 
 
 def test_delete_user(test_client, session_maker):

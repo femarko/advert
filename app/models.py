@@ -48,12 +48,15 @@ class Advertisement(Base):
     def __repr__(self):
         return f'{self.title}\n{self.description}'
 
-    def get_adv_params(self):
+    def get_adv_params(self) -> dict[str, str | int | datetime]:
         return {"id": self.id,
                 "title": self.title,
                 "description": self.description,
                 "creation_date": self.creation_date.isoformat(),
                 "user_id": self.user_id}
+
+    def get_related_user(self):
+        return self.user.get_user_data()
 
 
 Base.metadata.create_all(bind=engine)

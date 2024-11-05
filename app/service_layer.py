@@ -1,10 +1,16 @@
+import datetime
 from typing import TypeVar, Type
 
 from flask import request, Response
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app import models, adv
 from app.error_handlers import HttpError
+
+import logging
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 ModelClass = TypeVar("ModelClass", bound=models.Base)
 
@@ -26,6 +32,12 @@ def get_model_instance(model_class: Type[ModelClass], instance_id: int) -> Model
     if model_instance is None:
         raise HttpError(status_code=404, description=f"entry with id={instance_id} is not found")
     return model_instance
+
+
+def get_related_models(model_class: Type[ModelClass], instance_id: int) -> ModelClass:
+    model_instance_with_related_objects: ModelClass = \
+        request.session.query(model_class).filter(model_class.id == instance_id).options(joinedload("*")).first()
+    return model_instance_with_related_objects
 
 
 def add_model_instance(model_instance: ModelClass) -> ModelClass:

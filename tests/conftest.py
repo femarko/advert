@@ -1,7 +1,7 @@
 import pytest
 import sqlalchemy
 
-from app import adv, models, views
+from app import adv, models
 
 
 @pytest.fixture(scope="session")
@@ -23,8 +23,3 @@ def drop_all_create_all(engine):
 @pytest.fixture
 def test_client():
     return adv.test_client()
-
-
-@pytest.fixture
-def base_url():
-    return "http://127.0.0.1:5000/"
