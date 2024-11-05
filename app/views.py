@@ -1,119 +1,77 @@
-from typing import Type, TypeVar
+from flask import request, jsonify
+# from flask.views import MethodView
 
-from flask import request, jsonify, Response
-from flask.views import MethodView
-from sqlalchemy.exc import IntegrityError
-
-from app import adv
+from app import models, pass_hashing, validation, adv
 from app.error_handlers import HttpError
-from app import models
+from app.service_layer import get_model_instance, add_model_instance, edit_model_instance, delete_model_instance
 
 
-@adv.before_request
-def before_request() -> None:
-    session = models.Session()
-    request.session = session
+@adv.route("/", methods=["GET"])
+def hi():
+    return {"hi": "hi"}
 
 
-@adv.after_request
-def after_request(response: Response) -> Response:
-    request.session.close()
-    return response
+@adv.route("/users/<int:user_id>", methods=["GET"])
+def get_user_data(user_id: int):
+    user: models.User = get_model_instance(model_class=models.User, instance_id=user_id)
+    return user.get_user_data(), 200
 
 
-ModelClass = TypeVar("ModelClass", bound=models.Base)
+@adv.route("/users/", methods=["POST"])
+def create_user():
+    validated_data = validation.validate_data(validation_model=validation.CreateUser, data=request.json)
+    validated_data["password"] = pass_hashing.hash_password(password=validated_data["password"])
+    new_user = add_model_instance(model_instance=models.User(**validated_data))
+    new_user_id = new_user.id
+    return jsonify({"user id": new_user_id}), 201
 
 
-def get_model_instance(model_class: Type[ModelClass], instance_id: int) -> ModelClass:
-    model_instance = request.session.get(model_class, instance_id)
-    if model_instance is None:
-        raise HttpError(404, "not found")
-    return model_instance
+@adv.route("/users/", methods=["PATCH"])
+def update_user(user_id: int):
+    validated_data = validation.validate_data(validation_model=validation.EditUser, data=request.json)
+    user = get_model_instance(model_class=models.User, instance_id=user_id)
+    HttpError(status_code=404, description=f'user with id = {user_id} not found')
+    updated_user = edit_model_instance(model_instance=user, new_data=validated_data)
+    return {"modified user data": updated_user.get_user_data()}, 200
 
 
-def add_model_instance(model_instance: ModelClass) -> ModelClass:
-    try:
-        request.session.add(model_instance)
-        request.session.commit()
-    except IntegrityError as err:
-        raise HttpError(409, f"{str(err)}")
-    return model_instance
+@adv.route("/users/<int:user_id>/advertisements/", methods=["GET"])
+def get_related_advs(user_id: int):
+    user: models.User = get_model_instance(model_class=models.User, instance_id=user_id)
+    return user.get_user_advs(), 200
 
 
-class UserView(MethodView):
-
-    def session(self) -> models.Session:
-        return request.session
-
-    def get(self):
-        pass
-
-    def post(self):
-        pass
-
-    def patch(self):
-        pass
-
-    def delete(self):
-        pass
+@adv.route("/users/<int:user_id>/", methods=["DELETE"])
+def delete(user_id: int):
+    deleted_user = get_model_instance(model_class=models.User, instance_id=user_id)
+    delete_model_instance(deleted_user)
+    return jsonify({"deleted user data": deleted_user.get_user_data()}), 200
 
 
-class AdvView(MethodView):
+@adv.route("/advertisements/<int:adv_id>/", methods=["GET"])
+def get_adv_params(adv_id: int):
+    adv: models.Advertisement = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
+    return jsonify(adv.get_adv_params()), 200
 
-    @property
-    def session(self) -> models.Session:
-        return request.session
 
-    def get(self, adv_id: int):
-        adv: models.Advertisement = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
-        return jsonify(
-            {
-                "id": adv.id,
-                "title": adv.title,
-                "description": adv.description,
-                "creation_date": adv.creation_date.isoformat(),
-                "author": adv.author
-            }
-        )
+@adv.route("/advertisements/", methods=["POST"])
+def create_adv():
+    validated_data = validation.validate_data(validation_model=validation.CreateAdv, data=request.json)
+    new_adv = add_model_instance(model_instance=models.Advertisement(**validated_data))
+    return jsonify({'advertisement id': new_adv.id}), 201
 
-    def post(self):
-        adv_data = request.json
-        new_adv = models.Advertisement(**adv_data)
-        add_model_instance(model_instance=new_adv)
-        # self.session.add(new_adv)
-        # self.session.commit()
-        return jsonify({'id': new_adv.id})
 
-    def patch(self, adv_id: int):
-        adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
-        adv_data = request.json
-        for key, value in adv_data.items():
-            setattr(adv, key, value)
-        adv = add_model_instance(model_instance=adv)
-        return jsonify(
-            {
-                "modified data":
-                    {
-                        "id": adv.id,
-                        "title": adv.title,
-                        "description": adv.description,
-                        "creation_date": adv.creation_date.isoformat(),
-                        "author": adv.author
-                    }
-            }
-        )
+@adv.route("/advertisements/", methods=["PATCH"])
+def update_adv(adv_id: int):
+    validated_data = validation.validate_data(validation_model=validation.EditAdv, data=request.json)
+    adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
+    updated_adv = edit_model_instance(model_instance=adv, new_data=validated_data)
+    return jsonify({"modified advertisement params": updated_adv.get_adv_params()}), 200
 
-    def delete(self, adv_id: int):
-        adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
-        adv_params = {
-            "id": adv.id,
-            "title": adv.title,
-            "description": adv.description,
-            "creation_date": adv.creation_date,
-            "author": adv.author
-        }
-        self.session.delete(adv)
-        self.session.commit()
-        return jsonify({"deleted": adv_params})
 
+@adv.route("/advertisements/<int:adv_id>/", methods=["DELETE"])
+def delete(adv_id: int):
+    deleted_adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
+    delete_model_instance(deleted_adv)
+    return jsonify({"deleted advertisement params": deleted_adv.get_adv_params()}), 200
 
