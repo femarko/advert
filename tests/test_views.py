@@ -32,7 +32,7 @@ def test_create_user(test_client, session_maker, engine, user_data, user_id, dro
             ({"title": "test_title_2", "description": "test_description_2", "user_id": 2}, 2)
     )
 )
-def test_adv_view_post(test_client, session_maker, engine, adv_params, adv_id):
+def test_create_adv(test_client, session_maker, engine, adv_params, adv_id):
     response = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params)
     session = session_maker
     with session() as sess:
@@ -46,8 +46,8 @@ def test_adv_view_post(test_client, session_maker, engine, adv_params, adv_id):
     assert data_from_db[4] == adv_params["user_id"]
 
 
-def test_user_view_get(test_client, session_maker, base_url):
-    response = test_client.get("http://127.0.0.1:5000/users/1")
+def test_get_user_data(test_client, session_maker, base_url):
+    response = test_client.get("http://127.0.0.1:5000/users/1/")
     session = session_maker
     with session() as sess:
         data_from_db = \
@@ -59,8 +59,8 @@ def test_user_view_get(test_client, session_maker, base_url):
                              "registration_date": data_from_db[3].isoformat()}
 
 
-def test_adv_view_get(test_client, session_maker):
-    response = test_client.get("http://127.0.0.1:5000/advertisements/1")
+def test_get_adv_params(test_client, session_maker):
+    response = test_client.get("http://127.0.0.1:5000/advertisements/1/")
     session = session_maker
     with session() as sess:
         data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1')).first()
@@ -72,9 +72,9 @@ def test_adv_view_get(test_client, session_maker):
                              "user_id": data_from_db[4]}
 
 
-def test_user_view_patch(test_client, session_maker):
+def test_update_user(test_client, session_maker):
     new_data = {"name": "new_name"}
-    response = test_client.patch("http://127.0.0.1:5000/users/1", json=new_data)
+    response = test_client.patch("http://127.0.0.1:5000/users/1/", json=new_data)
     session = session_maker
     with session() as sess:
         data_from_db = \
@@ -86,9 +86,9 @@ def test_user_view_patch(test_client, session_maker):
                                                     "registration_date": data_from_db[3].isoformat()}}
 
 
-def test_adv_view_patch(test_client, session_maker):
+def test_update_adv(test_client, session_maker):
     new_data = {"title": "new_title"}
-    response = test_client.patch("http://127.0.0.1:5000/advertisements/1", json=new_data)
+    response = test_client.patch("http://127.0.0.1:5000/advertisements/1/", json=new_data)
     session = session_maker
     with session() as sess:
         data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1')).first()
@@ -100,7 +100,7 @@ def test_adv_view_patch(test_client, session_maker):
                                                                "user_id": data_from_db[4]}}
 
 
-def test_user_view_retrieve_related_advs(test_client, session_maker):
+def test_get_related_advs(test_client, session_maker):
     response = test_client.get("http://127.0.0.1:5000/users/1/advertisements/")
     session = session_maker
     with session() as sess:
@@ -113,8 +113,8 @@ def test_user_view_retrieve_related_advs(test_client, session_maker):
                               "user_id": data_from_db[4]}]
 
 
-def test_user_view_delete(test_client, session_maker):
-    response = test_client.delete("http://127.0.0.1:5000/users/1")
+def test_delete_user(test_client, session_maker):
+    response = test_client.delete("http://127.0.0.1:5000/users/1/")
     session = session_maker
     with session() as sess:
         user_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "user" WHERE id = 1')).first()
@@ -124,8 +124,8 @@ def test_user_view_delete(test_client, session_maker):
     assert related_adv_from_db is None
 
 
-def test_adv_view_delete(test_client, session_maker):
-    response = test_client.delete("http://127.0.0.1:5000/advertisements/2")
+def test_delete_adv(test_client, session_maker):
+    response = test_client.delete("http://127.0.0.1:5000/advertisements/2/")
     session = session_maker
     with session() as sess:
         data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 2')).first()

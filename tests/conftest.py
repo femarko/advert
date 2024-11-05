@@ -1,7 +1,7 @@
 import pytest
 import sqlalchemy
 
-from app import adv, models
+from app import adv, models, views
 
 
 @pytest.fixture(scope="session")

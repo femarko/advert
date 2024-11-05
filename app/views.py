@@ -1,17 +1,11 @@
 from flask import request, jsonify
-# from flask.views import MethodView
 
 from app import models, pass_hashing, validation, adv
 from app.error_handlers import HttpError
 from app.service_layer import get_model_instance, add_model_instance, edit_model_instance, delete_model_instance
 
 
-@adv.route("/", methods=["GET"])
-def hi():
-    return {"hi": "hi"}
-
-
-@adv.route("/users/<int:user_id>", methods=["GET"])
+@adv.route("/users/<int:user_id>/", methods=["GET"])
 def get_user_data(user_id: int):
     user: models.User = get_model_instance(model_class=models.User, instance_id=user_id)
     return user.get_user_data(), 200
@@ -26,7 +20,7 @@ def create_user():
     return jsonify({"user id": new_user_id}), 201
 
 
-@adv.route("/users/", methods=["PATCH"])
+@adv.route("/users/<int:user_id>/", methods=["PATCH"])
 def update_user(user_id: int):
     validated_data = validation.validate_data(validation_model=validation.EditUser, data=request.json)
     user = get_model_instance(model_class=models.User, instance_id=user_id)
@@ -42,7 +36,7 @@ def get_related_advs(user_id: int):
 
 
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])
-def delete(user_id: int):
+def delete_user(user_id: int):
     deleted_user = get_model_instance(model_class=models.User, instance_id=user_id)
     delete_model_instance(deleted_user)
     return jsonify({"deleted user data": deleted_user.get_user_data()}), 200
@@ -61,7 +55,7 @@ def create_adv():
     return jsonify({'advertisement id': new_adv.id}), 201
 
 
-@adv.route("/advertisements/", methods=["PATCH"])
+@adv.route("/advertisements/<int:adv_id>/", methods=["PATCH"])
 def update_adv(adv_id: int):
     validated_data = validation.validate_data(validation_model=validation.EditAdv, data=request.json)
     adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
@@ -70,7 +64,7 @@ def update_adv(adv_id: int):
 
 
 @adv.route("/advertisements/<int:adv_id>/", methods=["DELETE"])
-def delete(adv_id: int):
+def delete_adv(adv_id: int):
     deleted_adv = get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
     delete_model_instance(deleted_adv)
     return jsonify({"deleted advertisement params": deleted_adv.get_adv_params()}), 200
