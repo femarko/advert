@@ -1,6 +1,5 @@
 import pytest
 import sqlalchemy
-from flask import url_for
 
 from app import models, pass_hashing
 
@@ -117,6 +116,15 @@ def test_get_related_advs(test_client, session_maker):
                               "description": data_from_db[2],
                               "creation_date": data_from_db[3].isoformat(),
                               "user_id": data_from_db[4]}]
+
+
+def test_text_search(test_client, session_maker):
+    response = test_client.get("http://127.0.0.1:5000/advertisements?column=description&term=on_1")
+    session = session_maker
+    with session() as sess:
+        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id=1')).all()
+    assert response.status_code == 200
+    assert response.json == [{"title": data_from_db[0][1], "description": data_from_db[0][2]}]
 
 
 def test_get_related_user(test_client, session_maker):

@@ -1,7 +1,8 @@
-import datetime
+from datetime import datetime
 from typing import TypeVar, Type
 
 from flask import request, Response
+from sqlalchemy import text, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
@@ -38,6 +39,14 @@ def get_related_models(model_class: Type[ModelClass], instance_id: int) -> Model
     model_instance_with_related_objects: ModelClass = \
         request.session.query(model_class).filter(model_class.id == instance_id).options(joinedload("*")).first()
     return model_instance_with_related_objects
+
+
+def search_text(table: str, column: str, term: str) -> list[dict[str, str | int | datetime]]:
+    stmt = text(f"SELECT * FROM {table} WHERE {column} LIKE '%{term}%'")
+    results: list[tuple[str]] = request.session.execute(stmt).all()
+    if table == "adv":
+        return [{"title": result[1], "description": result[2]} for result in results]
+    return results
 
 
 def add_model_instance(model_instance: ModelClass) -> ModelClass:

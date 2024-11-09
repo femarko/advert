@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from sqlalchemy import text
 
 from app import adv, models, pass_hashing, validation, service_layer
 from app.error_handlers import HttpError
@@ -67,6 +68,12 @@ def update_adv(adv_id: int):
     adv = service_layer.get_model_instance(model_class=models.Advertisement, instance_id=adv_id)
     updated_adv = service_layer.edit_model_instance(model_instance=adv, new_data=validated_data)
     return jsonify({"modified advertisement params": updated_adv.get_adv_params()}), 200
+
+
+@adv.route("/advertisements", methods=["GET"])
+def search_text():
+    result = service_layer.search_text(table="adv", column=request.args.get("column"), term=request.args.get("term"))
+    return result, 200
 
 
 @adv.route("/advertisements/<int:adv_id>/", methods=["DELETE"])
