@@ -19,17 +19,20 @@ class EditUser(pydantic.BaseModel):
     password: str | None = None
 
 
-
 class CreateAdv(pydantic.BaseModel):
     title: str
     description: str
-    user_id: int
 
 
 class EditAdv(pydantic.BaseModel):
     title: str | None = None
     description: str | None = None
     user_id: int | None = None
+
+
+class Login(pydantic.BaseModel):
+    email: str
+    password: str
 
 
 def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -> dict[str, str] | None:

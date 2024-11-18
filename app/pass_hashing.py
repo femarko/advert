@@ -10,7 +10,7 @@ def hash_password(password: str) -> str:
     return bcrypt.generate_password_hash(password).decode()
 
 
-def check_password(password: str, hashed_password: str) -> bool:
-    password = password.encode()
+def check_password(hashed_password: str, password: str) -> bool:
     hashed_password = hashed_password.encode()
-    return bcrypt.check_password_hash(password, hashed_password)
+    password = password.encode()
+    return bcrypt.check_password_hash(pw_hash=hashed_password, password=password)

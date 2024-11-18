@@ -23,3 +23,20 @@ def drop_all_create_all(engine):
 @pytest.fixture
 def test_client():
     return adv.test_client()
+
+
+@pytest.fixture
+def app_context():
+    from app import adv
+    return adv.app_context()
+
+
+@pytest.fixture
+def access_token(session_maker, app_context, test_client) -> dict[str, str]:
+    access_token_dict = {}
+    for i in range(1, 3):
+        login_response = test_client\
+            .post("http://127.0.0.1:5000/login/", json={"email": f"test_{i}@email.com",
+                                                        "password": f"test_password_{i}"}).json
+        access_token_dict[f"user_{i}"] = login_response.get("access_token")
+    return access_token_dict

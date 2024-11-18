@@ -35,6 +35,14 @@ def get_model_instance(model_class: Type[ModelClass], instance_id: int) -> Model
     return model_instance
 
 
+def retrieve_model_instance(model_class: Type[ModelClass],
+                            filter_params: dict[str, str | int | datetime],
+                            session) -> list[ModelClass]:
+
+    model_instances: list[ModelClass] = session.query(model_class).filter_by(**filter_params).all()
+    return model_instances
+
+
 def get_related_models(model_class: Type[ModelClass], instance_id: int) -> ModelClass:
     model_instance_with_related_objects: ModelClass = \
         request.session.query(model_class).filter(model_class.id == instance_id).options(joinedload("*")).first()
