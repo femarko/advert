@@ -1,6 +1,10 @@
 import pydantic
-from typing import TypeVar, Type
+from typing import TypeVar, Type, Union, Optional, Any, NamedTuple, Literal
+from datetime import datetime
+from dataclasses import dataclass
 
+from app.filtering import FilterTypes, Comparison
+from app.models import AdvertisementColumns, UserColumns, User, Advertisement, Model
 from app.error_handlers import HttpError
 
 
@@ -35,9 +39,42 @@ class Login(pydantic.BaseModel):
     password: str
 
 
-def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -> dict[str, str] | None:
+class FilterAdvertisement(pydantic.BaseModel):
+    model_class: Model.ADVERTISEMENT
+    filter_type: FilterTypes
+    comparison: Comparison | None = None
+    column: AdvertisementColumns
+    column_value: str | int | datetime
+
+
+class FilterUser(pydantic.BaseModel):
+    model_class: Model.USER
+    filter_type: FilterTypes
+    comparison: Comparison | None = None
+    column: UserColumns
+    column_value: str | int | datetime
+
+
+class FilterParams(pydantic.BaseModel):
+    model_class: Model
+    filter_type: FilterTypes
+    comparison: Comparison | None = None
+    column: UserColumns | AdvertisementColumns
+    column_value: str | int | datetime
+    page: int | str
+    per_page: int | str
+
+
+@dataclass
+class ValidationResult:
+    validated_data: dict[Any, Any] | None = None
+    validation_errors: list[str] | None = None
+    status: Literal["OK", "Failed"] = "OK"
+
+
+def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -> ValidationResult:
     try:
-        return validation_model.model_validate(data).model_dump(exclude_unset=True)
+        return ValidationResult(validated_data=validation_model.model_validate(data).model_dump(exclude_unset=True))
     except pydantic.ValidationError as err:
         errors_list: list = err.errors()
-        raise HttpError(400, errors_list)
+        return ValidationResult(status="Failed", validation_errors=errors_list)

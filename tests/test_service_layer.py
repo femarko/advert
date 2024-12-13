@@ -1,31 +1,30 @@
-import pytest
-import sqlalchemy
+import sqlalchemy, pytest
 
+import app.authentication
 from app import service_layer, models
+from tests.conftest import access_token
 
 
-def test_retrieve_model_instance_correct_filter_params(session_maker):
+@pytest.mark.run(order=9)
+def test_current_user_is_authorized(access_token):
+    fake_user_id = 1
+    app.authentication.check_current_user(user_id=fake_user_id)
+    assert ...
+
+
+def test_get_user(session_maker):
     session = session_maker
-    with session() as sess1:
-        filter_params = {"email": "test_2@email.com"}
-        user: models.User = service_layer.retrieve_model_instance(model_class=models.User,
-                                                                  filter_params=filter_params,
-                                                                  session=sess1)[0]
-    session = session_maker
-    with session() as sess2:
-        data_from_db = \
-            sess2.execute(sqlalchemy.text('SELECT id, name, email, registration_date FROM "user" WHERE id = 2')).first()
-    assert user.id == data_from_db[0]
-    assert user.name == data_from_db[1]
-    assert user.email == data_from_db[2]
-    assert user.registration_date.isoformat() == data_from_db[3].isoformat()
-
-
-def test_retrieve_model_instance_incorrect_filter_params(session_maker):
-    session = session_maker
+    email = "test_1@email.com"
     with session() as sess:
-        filter_params = {"email": "incorrect@email.com"}
-        user_list: list[models.User] = service_layer.retrieve_model_instance(model_class=models.User,
-                                                                             filter_params=filter_params,
-                                                                             session=sess)
-    assert type(user_list) is list and not user_list
+        user: models.User = service_layer.get_user(
+            column="email",  # type: ignore
+            column_value=email,
+            session=sess)
+    with session() as sess:
+        expected = sess\
+            .execute(sqlalchemy.text(f'SELECT * FROM "user" WHERE email = :email'), dict(email=email)).first()
+    assert user.id == expected[0]
+    assert user.name == expected[1]
+    assert user.email == expected[2]
+    assert user.password == expected[3]
+    assert user.creation_date == expected[4]

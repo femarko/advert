@@ -1,19 +1,18 @@
 from datetime import datetime
-from typing import TypeVar, Type
 
 from flask import request, Response
-from sqlalchemy import text, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
 
-from app import models, adv
+from app import models, adv, filtering
 from app.error_handlers import HttpError
 
 import logging
+
+from app.models import ModelClass, User, Advertisement
+from app.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
+
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-
-ModelClass = TypeVar("ModelClass", bound=models.Base)
 
 
 @adv.before_request
@@ -28,33 +27,58 @@ def after_request(response: Response) -> Response:
     return response
 
 
-def get_model_instance(model_class: Type[ModelClass], instance_id: int) -> ModelClass:
-    model_instance = request.session.get(model_class, instance_id)
-    if model_instance is None:
-        raise HttpError(status_code=404, description=f"entry with id={instance_id} is not found")
-    return model_instance
+def get_related_advs(current_user_id: int, page: int, per_page: int, session) -> dict[str, int | list[Advertisement]]:
+    result: dict[str, int | list[Advertisement]] = filtering.filter_and_return_paginated_data(
+        session=session,
+        model_class=Advertisement,
+        filter_type=FilterTypes.COLUMN_VALUE,
+        column=AdvertisementColumns.USER_ID,
+        column_value=current_user_id,
+        page=page,
+        per_page=per_page
+    )
+    return result
 
 
-def retrieve_model_instance(model_class: Type[ModelClass],
-                            filter_params: dict[str, str | int | datetime],
-                            session) -> list[ModelClass]:
+def get_user(column: UserColumns, column_value: str | int | datetime, session) -> User:
+    results: list[User] = filtering.filter_and_return_list(session=session,
+                                                           model_class=User,
+                                                           filter_type=FilterTypes.COLUMN_VALUE,
+                                                           comparison=Comparison.IS,
+                                                           column=column,
+                                                           column_value=column_value)
+    if results:
+        user_instance: User = results[0]
+        return user_instance
+    raise HttpError(status_code=404, description=f"Entry is not found.")
 
-    model_instances: list[ModelClass] = session.query(model_class).filter_by(**filter_params).all()
-    return model_instances
+
+def get_adv(column: AdvertisementColumns, column_value: str | int | datetime, session) -> Advertisement:
+    filter_object = filtering.Filter(session=session)
+    results: list[Advertisement] = filter_object.get_list(model_class=Advertisement,
+                                                          filter_type=FilterTypes.COLUMN_VALUE,
+                                                          column=column,
+                                                          column_value=column_value)
+    if results:
+        adv_instance: Advertisement = results[0]
+        return adv_instance
+    raise HttpError(status_code=404, description=f"Entry is not found.")
 
 
-def get_related_models(model_class: Type[ModelClass], instance_id: int) -> ModelClass:
-    model_instance_with_related_objects: ModelClass = \
-        request.session.query(model_class).filter(model_class.id == instance_id).options(joinedload("*")).first()
-    return model_instance_with_related_objects
-
-
-def search_text(table: str, column: str, term: str) -> list[dict[str, str | int | datetime]]:
-    stmt = text(f"SELECT * FROM {table} WHERE {column} LIKE '%{term}%'")
-    results: list[tuple[str]] = request.session.execute(stmt).all()
-    if table == "adv":
-        return [{"title": result[1], "description": result[2]} for result in results]
-    return results
+def search_advs_by_text(column: AdvertisementColumns,
+                        column_value: str | int | datetime,
+                        page: int,
+                        per_page: int,
+                        session) -> dict[str, int | list[dict[str, str]]]:
+    filter_object = filtering.Filter(session=session)
+    result: dict[str, int | list[ModelClass]] = filter_object.paginate(model_class=Advertisement,
+                                                                       filter_type=FilterTypes.SEARCH_TEXT,
+                                                                       column=column,
+                                                                       column_value=column_value,
+                                                                       page=page,
+                                                                       per_page=per_page)
+    result["items"] = [{item.title: item.description} for item in result["items"]]  # type: ignore
+    return result
 
 
 def add_model_instance(model_instance: ModelClass) -> ModelClass:

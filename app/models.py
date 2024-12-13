@@ -1,4 +1,7 @@
+import enum
 from datetime import datetime
+from typing import TypeVar
+
 from sqlalchemy import create_engine, Integer, String, DateTime, func, ForeignKey
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -22,14 +25,14 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     password: Mapped[str] = mapped_column(String(100), nullable=False, index=False)
-    registration_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    creation_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     advertisements: Mapped[list["Advertisement"]] = relationship(back_populates="user", cascade="delete")
 
     def get_user_data(self) -> dict[str, str | int | datetime]:
         return {"id": self.id,
                 "name": self.name,
                 "email": self.email,
-                "registration_date": self.registration_date.isoformat()}
+                "creation_date": self.creation_date.isoformat()}
 
     def get_user_advs(self) -> list[dict[str, str | int | datetime]]:
         return [adv.get_adv_params() for adv in self.advertisements]
@@ -58,5 +61,32 @@ class Advertisement(Base):
     def get_related_user(self):
         return self.user.get_user_data()
 
+
+class Model(str, enum.Enum):
+    USER = "user"
+    ADVERTISEMENT = "advertisement"
+
+
+class ModelClasses(enum.Enum):
+    USER = User
+    ADV = Advertisement
+
+
+class AdvertisementColumns(str, enum.Enum):
+    ID = "id"
+    TITLE = "title"
+    DESCRIPTION = "description"
+    CREATION_DATE = "creation_date"
+    USER_ID = "user_id"
+
+
+class UserColumns(str, enum.Enum):
+    ID = "id",
+    NAME = "name"
+    EMAIL = "email"
+    CREATION_DATE = "creation_date"
+
+
+ModelClass = TypeVar("ModelClass", bound=Base)
 
 Base.metadata.create_all(bind=engine)
