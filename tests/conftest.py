@@ -87,14 +87,13 @@ def create_test_users_and_advs(session_maker, test_date):
                     "password": f"test_filter_{i}_pass"}
             adv = {"title": f"test_filter_{i}",
                    "description": f"test_filter_{i}",
-                   "creation_date": test_date,
                    "user_id": i}
             sess.execute(sqlalchemy.text('INSERT INTO "user" (id, name, email, password, creation_date) '
                                          'VALUES (:id, :name, :email, :password, :creation_date)'),
                          dict(id=user["id"],
                               name=user["name"],
                               email=user["email"],
-                              password=user["email"],
+                              password=user["password"],
                               creation_date=test_date))
             sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
                                          'VALUES (:id, :title, :description, :creation_date, :user_id)'),
@@ -104,9 +103,7 @@ def create_test_users_and_advs(session_maker, test_date):
                               creation_date=test_date,
                               user_id=i))
             sess.commit()
-
     yield
-
     with session() as sess:
         sess.execute(sqlalchemy.text('DELETE FROM "adv" WHERE (creation_date = :creation_date)'),
                      dict(creation_date=test_date))

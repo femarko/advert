@@ -73,7 +73,7 @@ class Filter:
                    invalid_value: Any = None,
                    valid_values: list[Any] | dict[str, Any] | None = None,
                    comment: str | None = None) -> None:
-        if not invalid_value and not comment:
+        if invalid_value is None and not comment:
             self.errors.add(f"Value for '{param}' is not found.")
         elif comment:
             self.errors.add(comment)
@@ -91,10 +91,11 @@ class Filter:
         if data_dict[Params.COLUMN] not in set(ValidParams.COLUMN_USER.value + ValidParams.COLUMN_ADV.value) \
                 and data_dict[Params.MODEL_CLASS] not in [mc.value for mc in ModelClasses]:
             self._add_error(
-                Params.COLUMN, data_dict[Params.COLUMN], {f"for User": ValidParams.COLUMN_USER.value,
-                                                          f"for Advertisement": ValidParams.COLUMN_ADV.value}
+                Params.COLUMN, data_dict[Params.COLUMN], {f"for {User}": ValidParams.COLUMN_USER.value,
+                                                          f"for {Advertisement}": ValidParams.COLUMN_ADV.value}
             )
-        if data_dict[Params.COMPARISON] not in ValidParams.COMPARISON.value:
+        if data_dict[Params.COMPARISON] not in ValidParams.COMPARISON.value \
+                and data_dict[Params.FILTER_TYPE] != FilterTypes.SEARCH_TEXT:
             self._add_error(Params.COMPARISON, data_dict[Params.COMPARISON], ValidParams.COMPARISON.value)
         match data_dict[Params.COLUMN], data_dict[Params.COLUMN_VALUE]:
             case column, column_value if \
@@ -113,46 +114,55 @@ class Filter:
                     and type(column_value) is not str:
                 self._add_error(comment=f"When {column=}, '{Params.COLUMN_VALUE}' must be a date string "
                                         f"of the following format: 'YYYY-MM-DD'.")
-            case *_, : pass
+            case *_, :
+                pass
         match data_dict[Params.FILTER_TYPE], data_dict[Params.COLUMN], data_dict[Params.COMPARISON]:
             case filter_type, column, comparison if filter_type == FilterTypes.COLUMN_VALUE and column in \
                     [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]\
                     and comparison in [Comparison.LE, Comparison.LT, Comparison.GE, Comparison.GT]:
                 self._add_error(Params.COMPARISON, comparison, [Comparison.IS.value, Comparison.NOT.value])
-            case *_, : pass
+            case filter_type, column, _ if filter_type == FilterTypes.SEARCH_TEXT and column not in \
+                    [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]:
+                self._add_error(comment=f"For {filter_type=} the folowing columns are available: "
+                                        f"{{for {User}: [{UserColumns.NAME}, {UserColumns.EMAIL}], "
+                                        f"for {Advertisement}: "
+                                        f"[{AdvertisementColumns.TITLE}, {AdvertisementColumns.DESCRIPTION}]}}")
+            case *_, :
+                pass
         match data_dict[Params.COLUMN], data_dict[Params.MODEL_CLASS]:
             case column, model_class if model_class == User and column not in ValidParams.COLUMN_USER.value:
                 self._add_error(Params.COLUMN, column, ValidParams.COLUMN_USER.value)
             case column, model_class if model_class == Advertisement and column not in ValidParams.COLUMN_ADV.value:
                 self._add_error(Params.COLUMN, column, ValidParams.COLUMN_ADV.value)
-            case *_, : pass
+            case *_, :
+                pass
 
     def _query_object(self,
-                      model_class: Type[User | Advertisement],
-                      filter_type: FilterTypes,
-                      column: AdvertisementColumns | UserColumns,
-                      column_value: str,
+                      model_class: Type[User | Advertisement] | None = None,
+                      filter_type: FilterTypes | None = None,
+                      column: AdvertisementColumns | UserColumns | None = None,
+                      column_value: str | None = None,
                       comparison: Comparison | None = None) -> QueryResult:
-        if self.errors:
-            return QueryResult(status="Failed", errors=self.errors)
-        else:
+        self.validate_params(params=Params, data={'model_class': model_class,
+                                                  'filter_type': filter_type,
+                                                  'column': column,
+                                                  'column_value': column_value,
+                                                  'comparison': comparison})
+        if not self.errors:
             query_object: sqlalchemy.orm.Query = self.session.query(model_class)
             model_attr = getattr(model_class, column, None)
+            if filter_type == FilterTypes.SEARCH_TEXT:
+                return QueryResult(query_object=query_object.filter(model_attr.ilike(f'%{column_value}%')))
             comparison_operator = getattr(sqlalchemy.sql.expression.ColumnOperators,
-                                          self._comparison[comparison]["apply"])
-            match filter_type, column:
-                case FilterTypes.COLUMN_VALUE, "creation_date":
-                    filtered_query_object = query_object.filter(
-                        comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
-                                            datetime.strptime(column_value, "%Y-%m-%d"))
-                    )
-                    return QueryResult(query_object=filtered_query_object)
-                case FilterTypes.COLUMN_VALUE, _:
-                    return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
-                case FilterTypes.SEARCH_TEXT, _:
-                    return QueryResult(query_object=query_object.filter(model_attr.ilike(f'%{column_value}%')))
-                case *_,:
-                    return QueryResult()
+                                          self._comparison.get(comparison)["apply"])
+            if column == "creation_date":
+                filtered_query_object = query_object.filter(
+                    comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
+                                        datetime.strptime(column_value, "%Y-%m-%d"))
+                )
+                return QueryResult(query_object=filtered_query_object)
+            return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
+        return QueryResult(status="Failed", errors=self.errors)
 
     def get_list(self,
                  model_class: Type[ModelClass],

@@ -39,30 +39,30 @@ class Login(pydantic.BaseModel):
     password: str
 
 
-class FilterAdvertisement(pydantic.BaseModel):
-    model_class: Model.ADVERTISEMENT
-    filter_type: FilterTypes
-    comparison: Comparison | None = None
-    column: AdvertisementColumns
-    column_value: str | int | datetime
+# class FilterAdvertisement(pydantic.BaseModel):
+#     model_class: Model.ADVERTISEMENT
+#     filter_type: FilterTypes
+#     comparison: Comparison | None = None
+#     column: AdvertisementColumns
+#     column_value: str | int | datetime
 
 
-class FilterUser(pydantic.BaseModel):
-    model_class: Model.USER
-    filter_type: FilterTypes
-    comparison: Comparison | None = None
-    column: UserColumns
-    column_value: str | int | datetime
+# class FilterUser(pydantic.BaseModel):
+#     model_class: Model.USER
+#     filter_type: FilterTypes
+#     comparison: Comparison | None = None
+#     column: UserColumns
+#     column_value: str | int | datetime
 
 
-class FilterParams(pydantic.BaseModel):
-    model_class: Model
-    filter_type: FilterTypes
-    comparison: Comparison | None = None
-    column: UserColumns | AdvertisementColumns
-    column_value: str | int | datetime
-    page: int | str
-    per_page: int | str
+# class FilterParams(pydantic.BaseModel):
+#     model_class: Model
+#     filter_type: FilterTypes
+#     comparison: Comparison | None = None
+#     column: UserColumns | AdvertisementColumns
+#     column_value: str | int | datetime
+#     page: int | str
+#     per_page: int | str
 
 
 @dataclass
