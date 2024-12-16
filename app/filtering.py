@@ -80,7 +80,7 @@ class Filter:
         else:
             self.errors.add(f"'{invalid_value}' is invalid value for '{param}'. Valid values: {valid_values}.")
 
-    def validate_params(self, data: dict[str, Any], params: Type[Params]):
+    def validate_params(self, data: dict[str, Any], params: Type[Params]) -> None:
         data_dict = {}
         for param in params:
             data_dict.update({param.value: data.get(param.value)})  # type: ignore
