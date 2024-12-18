@@ -23,7 +23,7 @@ def fake_session():
       "filter_type": "search_text",
       "comparison": ">=",
       "column": "description",
-      "column_value": "test"},
+      "column_value": "test"}
      )
 )
 def test_filter_validate_params_with_correct_params(fake_session, params):
