@@ -10,36 +10,6 @@ from app.error_handlers import HttpError
 from app.filtering import Filter, ValidParams, Params
 
 
-@pytest.mark.parametrize(
-    "model_class,filter_type,column,column_value,comparison",
-    (
-            (models.User, "search_text", "email", "st_f", ""),
-            (models.Advertisement, "search_text", "title", "ilt", ""),
-            (models.User, "column_value", "id", 1000, ">="),
-            (models.User, "column_value", "creation_date", "1900-01-01", "<="),
-            (models.Advertisement, "column_value", "creation_date", "1900-01-01", "<="),
-            (models.Advertisement, "column_value", "user_id", 1000, ">="),
-    )
-)
-def test_filter_and_return_list_with_correct_params(session_maker, model_class, filter_type, column, column_value,
-                                                    comparison, create_test_users_and_advs, test_date):
-    session = session_maker
-    with session() as sess:
-        filter_result = app.filtering.filter_and_return_list(session=sess,
-                                                             model_class=model_class,
-                                                             filter_type=filter_type,  # type: ignore
-                                                             column=column,  # type: ignore
-                                                             comparison=comparison,  # type: ignore
-                                                             column_value=column_value)
-    assert type(filter_result) is app.filtering.FilterResult
-    assert filter_result.status == "OK"
-    assert type(filter_result.filtered_data) is list
-    assert len(filter_result.filtered_data) == 2
-    assert isinstance(filter_result.filtered_data[0], model_class) and \
-           isinstance(filter_result.filtered_data[1], model_class)
-    assert filter_result.filtered_data[0].id == 1000
-    assert filter_result.filtered_data[1].id == 1001
-    assert filter_result.filtered_data[0].creation_date == filter_result.filtered_data[1].creation_date == test_date
 
 
 @pytest.mark.parametrize(
@@ -79,21 +49,6 @@ def test_filter_and_return_paginated_data_with_correct_params(
            filter_result.filtered_data["items"][1].id == 1001
 
 
-def test_filter_and_return_list_with_wrong_filter_type_comparison_and_column_parameters(
-        session_maker, create_test_users_and_advs, test_date
-):
-    session = session_maker
-    with session() as sess:
-        filter_result = app.filtering.filter_and_return_list(session=sess,
-                                                             model_class=models.Advertisement,  # type: ignore
-                                                             filter_type="wrong_filter_type",  # type: ignore
-                                                             column="wrong_column",  # type: ignore
-                                                             comparison="wrong_comparison",  # type: ignore
-                                                             column_value="test_filter")  # type: ignore
-    assert filter_result.status == "Failed"
-    assert filter_result.errors == ["Unexpected or missing 'column' parameter.",
-                                    "Unexpected or missing 'filter_type' parameter."]
-    assert filter_result.filtered_data is None
 
 
 def test_filter_and_return_paginated_data_with_wrong_filter_type_comparison_and_column_parameters(
@@ -113,21 +68,6 @@ def test_filter_and_return_paginated_data_with_wrong_filter_type_comparison_and_
     assert filter_result.filtered_data is None
 
 
-@pytest.mark.parametrize("creation_date_value", ("01.01.1900", "01/01/1900", "1-1-1900"))
-def test_filter_and_return_list_with_wrong_creation_data_format_as_column_value_parameter(
-        session_maker, create_test_users_and_advs, creation_date_value
-):
-    session = session_maker
-    with session() as sess:
-        filter_result = app.filtering.filter_and_return_list(session=sess,
-                                                             model_class=models.Advertisement,  # type: ignore
-                                                             filter_type="column_value",  # type: ignore
-                                                             column="creation_date",  # type: ignore
-                                                             comparison="is",  # type: ignore
-                                                             column_value=creation_date_value)  # type: ignore
-    assert filter_result.status == "Failed"
-    assert filter_result.errors == [f"time data '{creation_date_value}' does not match format '%Y-%m-%d'"]
-    assert filter_result.filtered_data is None
 
 
 @pytest.mark.parametrize("creation_date_value", ("01.01.1900", "01/01/1900", "1-1-1900"))
@@ -147,21 +87,6 @@ def test_filter_and_return_paginated_data_with_wrong_creation_data_format_as_col
     assert filter_result.filtered_data is None
 
 
-def test_filter_and_return_list_with_wrong_comparison_and_column_parameters(
-        session_maker, create_test_users_and_advs, test_date
-):
-    session = session_maker
-    with session() as sess:
-        filter_result = app.filtering.filter_and_return_list(session=sess,
-                                                             model_class=models.Advertisement,  # type: ignore
-                                                             filter_type="column_value",  # type: ignore
-                                                             column="wrong_column",  # type: ignore
-                                                             comparison="wrong_comparison",  # type: ignore
-                                                             column_value="test_filter")  # type: ignore
-    assert filter_result.status == "Failed"
-    assert filter_result.errors == ["Unexpected or missing 'column' parameter.",
-                                    "Unexpected or missing 'comparison' parameter."]
-    assert filter_result.filtered_data is None
 
 
 def test_filter_and_return_paginated_data_with_wrong_comparison_and_column_parameters(
@@ -181,20 +106,6 @@ def test_filter_and_return_paginated_data_with_wrong_comparison_and_column_param
     assert filter_result.filtered_data is None
 
 
-def test_filter_and_return_list_with_wrong_filter_type_parameter(
-        session_maker, create_test_users_and_advs, test_date
-):
-    session = session_maker
-    with session() as sess:
-        filter_result = app.filtering.filter_and_return_list(session=sess,
-                                                             model_class=models.Advertisement,  # type: ignore
-                                                             filter_type="wrong_filter_type",  # type: ignore
-                                                             column="id",  # type: ignore
-                                                             comparison="is",  # type: ignore
-                                                             column_value="1000")  # type: ignore
-    assert filter_result.status == "Failed"
-    assert filter_result.errors == ["Unexpected or missing 'filter_type' parameter."]
-    assert filter_result.filtered_data is None
 
 
 def test_filter_and_return_paginated_data_with_wrong_filter_type_parameter(

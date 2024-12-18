@@ -165,11 +165,11 @@ class Filter:
         return QueryResult(status="Failed", errors=self.errors)
 
     def get_list(self,
-                 model_class: Type[ModelClass],
-                 filter_type: FilterTypes,
-                 comparison: Comparison,
-                 column: AdvertisementColumns | UserColumns,
-                 column_value: str | int | datetime) -> FilterResult:
+                 model_class: Type[ModelClass] | None = None,
+                 filter_type: FilterTypes | None = None,
+                 comparison: Comparison | None = None,
+                 column: AdvertisementColumns | UserColumns | None = None,
+                 column_value: str | int | datetime | None = None) -> FilterResult:
         query_result: QueryResult = self._query_object(model_class=model_class,
                                                        filter_type=filter_type,
                                                        comparison=comparison,
@@ -182,11 +182,11 @@ class Filter:
         return filter_result
 
     def paginate(self,
-                 model_class: Type[ModelClass],
-                 filter_type: FilterTypes,
-                 comparison: Comparison,
-                 column: AdvertisementColumns | UserColumns,
-                 column_value: str | int | datetime,
+                 model_class: Type[ModelClass] | None = None,
+                 filter_type: FilterTypes | None = None,
+                 comparison: Comparison | None = None,
+                 column: AdvertisementColumns | UserColumns | None = None,
+                 column_value: str | int | datetime | None = None,
                  page: int | None = 1,
                  per_page: int | None = 10) -> FilterResult:
         offset = (page - 1) * per_page
@@ -209,32 +209,26 @@ class Filter:
 
 
 def filter_and_return_list(session: sqlalchemy.orm.Session,
-                           model_class: Type[ModelClass],
-                           filter_type: FilterTypes,
-                           comparison: Comparison,
-                           column: AdvertisementColumns | UserColumns,
-                           column_value: str | int | datetime) -> FilterResult:
-    filter_result: FilterResult = Filter(session=session).get_list(model_class=model_class,
-                                                                   filter_type=filter_type,
-                                                                   comparison=comparison,
-                                                                   column=column,
-                                                                   column_value=column_value)
+                           model_class: Type[ModelClass] | None = None,
+                           filter_type: FilterTypes | None = None,
+                           comparison: Comparison | None = None,
+                           column: AdvertisementColumns | UserColumns | None = None,
+                           column_value: str | int | datetime | None = None) -> FilterResult:
+    filter_result: FilterResult = Filter(session=session).get_list(
+        model_class, filter_type, comparison, column, column_value
+    )
     return filter_result
 
 
 def filter_and_return_paginated_data(session: sqlalchemy.orm.Session,
-                                     model_class: Type[ModelClass],
-                                     filter_type: FilterTypes,
-                                     column: AdvertisementColumns | UserColumns,
-                                     column_value: str | int | datetime,
-                                     comparison: Comparison = Comparison.IS,
+                                     model_class: Type[ModelClass] | None = None,
+                                     filter_type: FilterTypes | None = None,
+                                     column: AdvertisementColumns | UserColumns | None = None,
+                                     column_value: str | int | datetime | None = None,
+                                     comparison: Comparison = Comparison.IS,  # todo: why here is Comparison.IS?
                                      page: int | None = 1,
                                      per_page: int | None = 10) -> FilterResult:
-    filter_result: FilterResult = Filter(session=session).paginate(model_class=model_class,
-                                                                   filter_type=filter_type,
-                                                                   comparison=comparison,
-                                                                   column=column,
-                                                                   column_value=column_value,
-                                                                   page=page,
-                                                                   per_page=per_page)
+    filter_result: FilterResult = Filter(session=session).paginate(
+        model_class, filter_type, comparison, column, column_value, page, per_page
+    )
     return filter_result
