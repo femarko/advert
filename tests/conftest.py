@@ -3,6 +3,7 @@ import datetime
 import pytest
 import sqlalchemy
 
+import app.pass_hashing
 from app import adv, models
 
 
@@ -34,13 +35,15 @@ def app_context():
 
 
 @pytest.fixture
-def access_token(session_maker, app_context, test_client) -> dict[str, str]:
+def access_token(session_maker, app_context, test_client, create_test_users_and_advs) -> dict[str, str]:
     access_token_dict = {}
-    for i in range(1, 3):
-        login_response = test_client\
-            .post("http://127.0.0.1:5000/login/", json={"email": f"test_{i}@email.com",
-                                                        "password": f"test_password_{i}"}).json
-        access_token_dict[f"user_{i}"] = login_response.get("access_token")
+    for i in range(1000, 1002):
+        login_response = test_client.post(
+            "http://127.0.0.1:5000/login/", json={"email": f"test_filter_{i}@email.com",
+                                                  "password": f"test_filter_{i}_pass"}
+        )
+        login_response_json = login_response.json
+        access_token_dict[f"user_{i}"] = login_response_json.get("access_token")
     return access_token_dict
 
 
@@ -93,7 +96,7 @@ def create_test_users_and_advs(session_maker, test_date):
                          dict(id=user["id"],
                               name=user["name"],
                               email=user["email"],
-                              password=user["password"],
+                              password=app.pass_hashing.hash_password(user["password"]),
                               creation_date=test_date))
             sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
                                          'VALUES (:id, :title, :description, :creation_date, :user_id)'),

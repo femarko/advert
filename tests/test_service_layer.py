@@ -2,6 +2,7 @@ import sqlalchemy, pytest
 
 import app.authentication
 from app import service_layer, models
+from app.filtering import FilterResult
 from tests.conftest import access_token
 
 
@@ -16,15 +17,14 @@ def test_get_user(session_maker):
     session = session_maker
     email = "test_1@email.com"
     with session() as sess:
-        user: models.User = service_layer.get_user(
-            column="email",  # type: ignore
-            column_value=email,
-            session=sess)
+        filter_result: FilterResult = service_layer.get_user(
+            column="email", column_value=email, session=sess  # type: ignore
+        )
     with session() as sess:
         expected = sess\
             .execute(sqlalchemy.text(f'SELECT * FROM "user" WHERE email = :email'), dict(email=email)).first()
-    assert user.id == expected[0]
-    assert user.name == expected[1]
-    assert user.email == expected[2]
-    assert user.password == expected[3]
-    assert user.creation_date == expected[4]
+    assert filter_result.filtered_data[0].id == expected[0]
+    assert filter_result.filtered_data[0].name == expected[1]
+    assert filter_result.filtered_data[0].email == expected[2]
+    assert filter_result.filtered_data[0].password == expected[3]
+    assert filter_result.filtered_data[0].creation_date == expected[4]

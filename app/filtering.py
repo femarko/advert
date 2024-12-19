@@ -43,7 +43,7 @@ class ValidParams(enum.Enum):
 @dataclass
 class QueryBase:
     status: Literal["OK", "Failed"] = "OK"
-    errors: set[str] | None = None
+    errors: set[str] | list[str] | None = None
 
 
 @dataclass
@@ -100,7 +100,7 @@ class Filter:
         match data_dict[Params.COLUMN], data_dict[Params.COLUMN_VALUE]:
             case column, column_value if \
                     column in [UserColumns.ID, AdvertisementColumns.ID, AdvertisementColumns.USER_ID] \
-                    and (type(column_value) is not str or not column_value.isdigit()):
+                    and ((type(column_value) is str and not column_value.isdigit()) or type(column_value) is not int):
                 self._add_error(comment=f"'{column}' must be a digit.")
             case column, column_value if \
                     column in [UserColumns.CREATION_DATE, AdvertisementColumns.CREATION_DATE] \
@@ -162,7 +162,7 @@ class Filter:
                 )
                 return QueryResult(query_object=filtered_query_object)
             return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
-        return QueryResult(status="Failed", errors=self.errors)
+        return QueryResult(status="Failed", errors=list(self.errors))
 
     def get_list(self,
                  model_class: Type[ModelClass] | None = None,

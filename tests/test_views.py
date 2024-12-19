@@ -95,13 +95,13 @@ def test_get_adv_params(test_client, session_maker, access_token):
 @pytest.mark.run(order=14)
 def test_update_user_with_correct_input_data(test_client, session_maker, access_token):
     new_data = {"name": "new_name"}
-    response = test_client.patch("http://127.0.0.1:5000/users/1/",
+    response = test_client.patch("http://127.0.0.1:5000/users/1000/",
                                  json=new_data,
-                                 headers={"Authorization": f"Bearer {access_token['user_1']}"})
+                                 headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     session = session_maker
     with session() as sess:
         data_from_db = \
-            sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1')).first()
+            sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1000')).first()
     assert response.status_code == 200
     assert response.json == {"modified user data": {"id": data_from_db[0],
                                                     "name": data_from_db[1],
@@ -189,25 +189,27 @@ def test_get_related_advs_where_page_number_is_out_of_range(test_client, session
 
 
 @pytest.mark.run(order=19)
-def test_search_text(test_client, session_maker):
+def test_search_text(test_client, session_maker, create_test_users_and_advs):
     response = test_client\
-        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&filter_key=on_1")
+        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&column_value=st_f")
     session = session_maker
     with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id=1')).all()
+        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id=1000 UNION '
+                                                    'SELECT * FROM "adv" WHERE id=1001')).all()
     assert response.status_code == 200
-    assert response.json["items"] == [{"title": data_from_db[0][1], "description": data_from_db[0][2]}]
+    assert response.json["items"] == [{data_from_db[0][1]: data_from_db[0][2]},
+                                      {data_from_db[1][1]: data_from_db[1][2]}]
 
 
 @pytest.mark.run(order=20)
 def test_update_adv(test_client, session_maker, access_token):
     new_data = {"title": "new_title"}
-    response = test_client.patch("http://127.0.0.1:5000/advertisements/1/",
+    response = test_client.patch("http://127.0.0.1:5000/advertisements/1000/",
                                  json=new_data,
-                                 headers={"Authorization": f"Bearer {access_token['user_1']}"})
+                                 headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     session = session_maker
     with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1')).first()
+        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1000')).first()
     assert response.status_code == 200
     assert response.json == {"modified advertisement params": {"id": data_from_db[0],
                                                                "title": data_from_db[1],
@@ -260,12 +262,12 @@ def test_delete_user(test_client, session_maker, access_token):
 def test_delete_adv(test_client, session_maker, access_token):
     session = session_maker
     with session() as sess:
-        data_from_db_before_request = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 3')).first()
-    response = test_client.delete("http://127.0.0.1:5000/advertisements/3/",
-                                  headers={"Authorization": f"Bearer {access_token['user_2']}"})
+        data_from_db_before_request = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1000')).first()
+    response = test_client.delete("http://127.0.0.1:5000/advertisements/1000/",
+                                  headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     session = session_maker
     with session() as sess:
-        data_from_db_after_request = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 2')).first()
+        data_from_db_after_request = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1000')).first()
     assert response.status_code == 200
     assert response.json == {"deleted advertisement params": {"id": data_from_db_before_request[0],
                                                               "title": data_from_db_before_request[1],

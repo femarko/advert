@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, adv, filtering
 from app.error_handlers import HttpError
+from app.filtering import filter_and_return_list, filter_and_return_paginated_data, FilterResult
 
 import logging
 
@@ -27,42 +28,35 @@ def after_request(response: Response) -> Response:
     return response
 
 
-def get_related_advs(current_user_id: int, page: int, per_page: int, session) -> dict[str, int | list[Advertisement]]:
-    result: dict[str, int | list[Advertisement]] = filtering.filter_and_return_paginated_data(
-        session=session,
-        model_class=Advertisement,
-        filter_type=FilterTypes.COLUMN_VALUE,
-        column=AdvertisementColumns.USER_ID,
-        column_value=current_user_id,
-        page=page,
-        per_page=per_page
-    )
-    return result
+def get_related_advs(current_user_id: int, page: int, per_page: int, session) -> FilterResult:
+    filter_result: FilterResult = filter_and_return_paginated_data(session=session,
+                                                                   model_class=Advertisement,
+                                                                   filter_type=FilterTypes.COLUMN_VALUE,
+                                                                   column=AdvertisementColumns.USER_ID,
+                                                                   column_value=current_user_id,
+                                                                   page=page,
+                                                                   per_page=per_page)
+    return filter_result
 
 
-def get_user(column: UserColumns, column_value: str | int | datetime, session) -> User:
-    results: list[User] = filtering.filter_and_return_list(session=session,
-                                                           model_class=User,
-                                                           filter_type=FilterTypes.COLUMN_VALUE,
-                                                           comparison=Comparison.IS,
-                                                           column=column,
-                                                           column_value=column_value)
-    if results:
-        user_instance: User = results[0]
-        return user_instance
-    raise HttpError(status_code=404, description=f"Entry is not found.")
+def get_user(column: UserColumns, column_value: str | int | datetime, session) -> FilterResult:
+    results: FilterResult = filter_and_return_list(session=session,
+                                                   model_class=User,
+                                                   filter_type=FilterTypes.COLUMN_VALUE,
+                                                   comparison=Comparison.IS,
+                                                   column=column,
+                                                   column_value=column_value)
+    return results
 
 
-def get_adv(column: AdvertisementColumns, column_value: str | int | datetime, session) -> Advertisement:
-    filter_object = filtering.Filter(session=session)
-    results: list[Advertisement] = filter_object.get_list(model_class=Advertisement,
-                                                          filter_type=FilterTypes.COLUMN_VALUE,
-                                                          column=column,
-                                                          column_value=column_value)
-    if results:
-        adv_instance: Advertisement = results[0]
-        return adv_instance
-    raise HttpError(status_code=404, description=f"Entry is not found.")
+def get_adv(column: AdvertisementColumns, column_value: str | int | datetime, session) -> FilterResult:
+    results: FilterResult = filter_and_return_list(session=session,
+                                                   model_class=Advertisement,
+                                                   filter_type=FilterTypes.COLUMN_VALUE,
+                                                   comparison=Comparison.IS,
+                                                   column=column,
+                                                   column_value=column_value)
+    return results
 
 
 def search_advs_by_text(column: AdvertisementColumns,
@@ -70,15 +64,18 @@ def search_advs_by_text(column: AdvertisementColumns,
                         page: int,
                         per_page: int,
                         session) -> dict[str, int | list[dict[str, str]]]:
-    filter_object = filtering.Filter(session=session)
-    result: dict[str, int | list[ModelClass]] = filter_object.paginate(model_class=Advertisement,
-                                                                       filter_type=FilterTypes.SEARCH_TEXT,
-                                                                       column=column,
-                                                                       column_value=column_value,
-                                                                       page=page,
-                                                                       per_page=per_page)
-    result["items"] = [{item.title: item.description} for item in result["items"]]  # type: ignore
-    return result
+    filter_result: FilterResult = filter_and_return_paginated_data(session=session,
+                                                                   model_class=Advertisement,
+                                                                   filter_type=FilterTypes.SEARCH_TEXT,
+                                                                   column=column,
+                                                                   column_value=column_value,
+                                                                   page=page,
+                                                                   per_page=per_page)
+    if filter_result.status == "OK":
+        filter_result.filtered_data["items"] = [
+            {item.title: item.description} for item in filter_result.filtered_data["items"]
+        ]
+    return filter_result
 
 
 def add_model_instance(model_instance: ModelClass) -> ModelClass:

@@ -40,7 +40,7 @@ class Login(pydantic.BaseModel):
 
 
 # class FilterAdvertisement(pydantic.BaseModel):
-#     model_class: Model.ADVERTISEMENT
+#     model_class: Advertisement
 #     filter_type: FilterTypes
 #     comparison: Comparison | None = None
 #     column: AdvertisementColumns
