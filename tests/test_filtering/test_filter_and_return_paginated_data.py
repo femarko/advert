@@ -1,9 +1,14 @@
-import pytest
-import sqlalchemy
+from typing import Any
+from datetime import datetime
 
+import pytest
+import sqlalchemy.orm
+
+import app.filtering
 from app import models
 from app.models import User, Advertisement
-from app.filtering import filter_and_return_list, FilterResult
+from app.error_handlers import HttpError
+from app.filtering import Filter, ValidParams, Params, filter_and_return_paginated_data, FilterResult
 
 
 @pytest.mark.parametrize(
@@ -58,26 +63,29 @@ from app.filtering import filter_and_return_list, FilterResult
       "filter_type": "column_value",
       "column": "user_id",
       "column_value": "1000",
-      "comparison": ">="})
-)
-def test_filter_and_return_list_with_correct_params(
-        session_maker, create_test_users_and_advs, test_date, params
+      "comparison": ">="}))
+def test_filter_and_return_paginated_data_with_correct_params(
+        session_maker, create_test_users_and_advs, params, test_date
 ):
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **params)
-    assert type(filter_result) is FilterResult
+        filter_result = filter_and_return_paginated_data(session=sess, **params)
+    assert type(filter_result) is app.filtering.FilterResult
     assert filter_result.status == "OK"
-    assert type(filter_result.filtered_data) is list
-    assert len(filter_result.filtered_data) == 2
-    assert isinstance(filter_result.filtered_data[0], params["model_class"]) and \
-           isinstance(filter_result.filtered_data[1], params["model_class"])
-    assert filter_result.filtered_data[0].id == 1000
-    assert filter_result.filtered_data[1].id == 1001
-    assert filter_result.filtered_data[0].creation_date == filter_result.filtered_data[1].creation_date == test_date
+    assert type(filter_result.filtered_data) is dict
+    assert filter_result.filtered_data["page"] == 1
+    assert filter_result.filtered_data["per_page"] == 10
+    assert filter_result.filtered_data["total"] == 2
+    assert filter_result.filtered_data["total_pages"] == 1
+    assert type(filter_result.filtered_data["items"]) == list
+    assert len(filter_result.filtered_data["items"]) == 2
+    assert isinstance(filter_result.filtered_data["items"][0], params["model_class"])
+    assert isinstance(filter_result.filtered_data["items"][1], params["model_class"])
+    assert filter_result.filtered_data["items"][0].id == 1000
+    assert filter_result.filtered_data["items"][1].id == 1001
 
 
-def test_filter_and_return_list_all_params_are_wrong(session_maker):
+def test_filter_and_return_paginated_data_all_params_are_wrong(session_maker):
     params = {"model_class": "wrong_param",
               "filter_type": "wrong_param",
               "comparison": "wrong_param",
@@ -85,7 +93,7 @@ def test_filter_and_return_list_all_params_are_wrong(session_maker):
               "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **params)
+        filter_result = filter_and_return_paginated_data(session=sess, **params)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -102,21 +110,21 @@ def test_filter_and_return_list_all_params_are_wrong(session_maker):
     }
 
 
-def test_filter_and_return_list_all_params_are_missing(session_maker):
+def test_filter_and_return_paginated_data_all_params_are_missing(session_maker):
     params = {}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **params)
+        filter_result = filter_and_return_paginated_data(session=sess, **params)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
     assert filter_result.errors == {f"Value for 'model_class' is not found.",
                                     f"Value for 'filter_type' is not found.",
-                                    f"Value for 'comparison' is not found.",
-                                    f"Value for 'column' is not found."}
+                                    f"Value for 'column' is not found.",
+                                    f"Value for 'comparison' is not found."}
 
 
-def test_filter_and_return_list_all_params_are_empty_strings(session_maker):
+def test_filter_and_return_paginated_data_all_params_are_empty_strings(session_maker):
     data = {"model_class": "",
             "filter_type": "",
             "comparison": "",
@@ -124,7 +132,7 @@ def test_filter_and_return_list_all_params_are_empty_strings(session_maker):
             "column_value": ""}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -142,7 +150,7 @@ def test_filter_and_return_list_all_params_are_empty_strings(session_maker):
     }
 
 
-def test_filter_and_return_list_wrong__model_class(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "column_value",
             "comparison": "is",
@@ -150,7 +158,7 @@ def test_filter_and_return_list_wrong__model_class(session_maker):
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -159,7 +167,7 @@ def test_filter_and_return_list_wrong__model_class(session_maker):
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__filter_type(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__filter_type(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -167,7 +175,7 @@ def test_filter_and_return_list_wrong__filter_type(session_maker, model_class, c
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -176,7 +184,7 @@ def test_filter_and_return_list_wrong__filter_type(session_maker, model_class, c
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__comparison(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__comparison(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "wrong_param",
@@ -184,7 +192,7 @@ def test_filter_and_return_list_wrong__comparison(session_maker, model_class, co
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -195,7 +203,7 @@ def test_filter_and_return_list_wrong__comparison(session_maker, model_class, co
 @pytest.mark.parametrize("model_class,columns",
                          ((User, ['id', 'name', 'email', 'creation_date']),
                           (Advertisement, ['id', 'title', 'description', 'creation_date', 'user_id'])))
-def test_filter_and_return_list_wrong__column(session_maker, model_class, columns):
+def test_filter_and_return_paginated_data_wrong__column(session_maker, model_class, columns):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "is",
@@ -203,7 +211,7 @@ def test_filter_and_return_list_wrong__column(session_maker, model_class, column
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -211,7 +219,7 @@ def test_filter_and_return_list_wrong__column(session_maker, model_class, column
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__column_value(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__column_value(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "is",
@@ -219,14 +227,14 @@ def test_filter_and_return_list_wrong__column_value(session_maker, model_class, 
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "OK"
     assert filter_result.errors is None
-    assert filter_result.filtered_data == []
+    assert filter_result.filtered_data == {'page': 1, 'per_page': 10, 'total': 0, 'total_pages': 0, 'items': []}
 
 
-def test_filter_and_return_list_wrong__model_class__filter_type(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class__filter_type(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -234,7 +242,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type(session_maker):
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -245,7 +253,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type(session_maker):
     }
 
 
-def test_filter_and_return_list_wrong__model_class__comparison(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class__comparison(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "column_value",
             "comparison": "wrong_param",
@@ -253,7 +261,7 @@ def test_filter_and_return_list_wrong__model_class__comparison(session_maker):
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -264,7 +272,7 @@ def test_filter_and_return_list_wrong__model_class__comparison(session_maker):
     }
 
 
-def test_filter_and_return_list_wrong__model_class__column(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class__column(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "column_value",
             "comparison": "is",
@@ -272,7 +280,7 @@ def test_filter_and_return_list_wrong__model_class__column(session_maker):
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -286,7 +294,7 @@ def test_filter_and_return_list_wrong__model_class__column(session_maker):
     }
 
 
-def test_filter_and_return_list_wrong__model_class__column_value(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class__column_value(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "column_value",
             "comparison": "is",
@@ -294,7 +302,7 @@ def test_filter_and_return_list_wrong__model_class__column_value(session_maker):
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -303,7 +311,7 @@ def test_filter_and_return_list_wrong__model_class__column_value(session_maker):
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__filter_type__comparison(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__filter_type__comparison(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "wrong_param",
             "comparison": "wrong_param",
@@ -311,7 +319,7 @@ def test_filter_and_return_list_wrong__filter_type__comparison(session_maker, mo
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -324,7 +332,7 @@ def test_filter_and_return_list_wrong__filter_type__comparison(session_maker, mo
 @pytest.mark.parametrize("model_class,columns",
                          ((User, ['id', 'name', 'email', 'creation_date']),
                           (Advertisement, ['id', 'title', 'description', 'creation_date', 'user_id'])))
-def test_filter_and_return_list_wrong__filter_type__column(session_maker, model_class, columns):
+def test_filter_and_return_paginated_data_wrong__filter_type__column(session_maker, model_class, columns):
     data = {"model_class": model_class,
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -332,7 +340,7 @@ def test_filter_and_return_list_wrong__filter_type__column(session_maker, model_
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -343,7 +351,7 @@ def test_filter_and_return_list_wrong__filter_type__column(session_maker, model_
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__filter_type__column_value(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__filter_type__column_value(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -351,7 +359,7 @@ def test_filter_and_return_list_wrong__filter_type__column_value(session_maker, 
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -363,7 +371,7 @@ def test_filter_and_return_list_wrong__filter_type__column_value(session_maker, 
 @pytest.mark.parametrize("model_class,columns",
                          ((User, ['id', 'name', 'email', 'creation_date']),
                           (Advertisement, ['id', 'title', 'description', 'creation_date', 'user_id'])))
-def test_filter_and_return_list_wrong__comparison__column(session_maker, model_class, columns):
+def test_filter_and_return_paginated_data_wrong__comparison__column(session_maker, model_class, columns):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "wrong_param",
@@ -371,7 +379,7 @@ def test_filter_and_return_list_wrong__comparison__column(session_maker, model_c
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -382,7 +390,7 @@ def test_filter_and_return_list_wrong__comparison__column(session_maker, model_c
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__comparison__column_value(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__comparison__column_value(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "wrong_param",
@@ -390,7 +398,7 @@ def test_filter_and_return_list_wrong__comparison__column_value(session_maker, m
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -402,7 +410,7 @@ def test_filter_and_return_list_wrong__comparison__column_value(session_maker, m
 @pytest.mark.parametrize("model_class,columns",
                          ((User, ['id', 'name', 'email', 'creation_date']),
                           (Advertisement, ['id', 'title', 'description', 'creation_date', 'user_id'])))
-def test_filter_and_return_list_wrong__column__column_value(session_maker, model_class, columns):
+def test_filter_and_return_paginated_data_wrong__column__column_value(session_maker, model_class, columns):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "is",
@@ -410,7 +418,7 @@ def test_filter_and_return_list_wrong__column__column_value(session_maker, model
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -418,7 +426,7 @@ def test_filter_and_return_list_wrong__column__column_value(session_maker, model
 
 
 @pytest.mark.parametrize("column", ("name", "title"))
-def test_filter_and_return_list_wrong__model_class__filter_type__comparison(session_maker, column):
+def test_filter_and_return_paginated_data_wrong__model_class__filter_type__comparison(session_maker, column):
     data = {"model_class": "wrong_param",
             "filter_type": "wrong_param",
             "comparison": "wrong_param",
@@ -426,7 +434,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__comparison(sess
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -438,7 +446,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__comparison(sess
     }
 
 
-def test_filter_and_return_list_wrong__model_class__filter_type__column(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class__filter_type__column(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -446,7 +454,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__column(session_
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -462,7 +470,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__column(session_
 
 
 @pytest.mark.parametrize("column", ("name", "title"))
-def test_filter_and_return_list_wrong__model_class__filter_type__column_value(session_maker, column):
+def test_filter_and_return_paginated_data_wrong__model_class__filter_type__column_value(session_maker, column):
     data = {"model_class": "wrong_param",
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -470,7 +478,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__column_value(se
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -482,7 +490,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__column_value(se
 
 
 @pytest.mark.parametrize("column", ("name", "title"))
-def test_filter_and_return_list_wrong__model_class__comparison__column_value(session_maker, column):
+def test_filter_and_return_paginated_data_wrong__model_class__comparison__column_value(session_maker, column):
     data = {"model_class": "wrong_param",
             "filter_type": "column_value",
             "comparison": "wrong_param",
@@ -490,7 +498,7 @@ def test_filter_and_return_list_wrong__model_class__comparison__column_value(ses
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -501,7 +509,7 @@ def test_filter_and_return_list_wrong__model_class__comparison__column_value(ses
     }
 
 
-def test_filter_and_return_list_wrong__model_class__column__column_value(session_maker):
+def test_filter_and_return_paginated_data_wrong__model_class__column__column_value(session_maker):
     data = {"model_class": "wrong_param",
             "filter_type": "column_value",
             "comparison": "is",
@@ -509,7 +517,7 @@ def test_filter_and_return_list_wrong__model_class__column__column_value(session
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -524,7 +532,7 @@ def test_filter_and_return_list_wrong__model_class__column__column_value(session
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
-def test_filter_and_return_list_wrong__filter_type__comparison__column_value(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_wrong__filter_type__comparison__column_value(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "wrong_param",
             "comparison": "wrong_param",
@@ -532,7 +540,7 @@ def test_filter_and_return_list_wrong__filter_type__comparison__column_value(ses
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -545,7 +553,7 @@ def test_filter_and_return_list_wrong__filter_type__comparison__column_value(ses
 @pytest.mark.parametrize("model_class,columns",
                          ((User, ['id', 'name', 'email', 'creation_date']),
                           (Advertisement, ['id', 'title', 'description', 'creation_date', 'user_id'])))
-def test_filter_and_return_list_wrong__filter_type__column__column_value(session_maker, model_class, columns):
+def test_filter_and_return_paginated_data_wrong__filter_type__column__column_value(session_maker, model_class, columns):
     data = {"model_class": model_class,
             "filter_type": "wrong_param",
             "comparison": "is",
@@ -553,7 +561,7 @@ def test_filter_and_return_list_wrong__filter_type__column__column_value(session
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -566,7 +574,7 @@ def test_filter_and_return_list_wrong__filter_type__column__column_value(session
 @pytest.mark.parametrize("model_class,columns",
                          ((User, ['id', 'name', 'email', 'creation_date']),
                           (Advertisement, ['id', 'title', 'description', 'creation_date', 'user_id'])))
-def test_filter_and_return_list_wrong__comparison__column__column_value(session_maker, model_class, columns):
+def test_filter_and_return_paginated_data_wrong__comparison__column__column_value(session_maker, model_class, columns):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "wrong_param",
@@ -574,7 +582,7 @@ def test_filter_and_return_list_wrong__comparison__column__column_value(session_
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -585,7 +593,7 @@ def test_filter_and_return_list_wrong__comparison__column__column_value(session_
 
 
 @pytest.mark.parametrize("model_class,column", ((User, 'id'), (Advertisement, 'id'), (Advertisement, 'user_id')))
-def test_filter_and_return_list_nondigit_characters_as__id__user_id(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_nondigit_characters_as__id__user_id(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "is",
@@ -593,7 +601,7 @@ def test_filter_and_return_list_nondigit_characters_as__id__user_id(session_make
             "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -606,7 +614,7 @@ def test_filter_and_return_list_nondigit_characters_as__id__user_id(session_make
                                                     (Advertisement, 2024),
                                                     (User, "01/01/2024"),
                                                     (Advertisement, "01/01/2024")))
-def test_filter_and_return_list_wrong_data_format_as__creation_date(session_maker, model_class, wrong_date):
+def test_filter_and_return_paginated_data_wrong_data_format_as__creation_date(session_maker, model_class, wrong_date):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": "is",
@@ -614,7 +622,7 @@ def test_filter_and_return_list_wrong_data_format_as__creation_date(session_make
             "column_value": wrong_date}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -639,7 +647,7 @@ def test_filter_and_return_list_wrong_data_format_as__creation_date(session_make
                                                            (Advertisement, ">=", "description"),
                                                            (Advertisement, "<", "description"),
                                                            (Advertisement, "<=", "description")))
-def test_filter_and_return_list_wrong_comparison_for_text_fields(session_maker, model_class, comparison, column):
+def test_filter_and_return_paginated_data_wrong_comparison_for_text_fields(session_maker, model_class, comparison, column):
     data = {"model_class": model_class,
             "filter_type": "column_value",
             "comparison": comparison,
@@ -647,7 +655,7 @@ def test_filter_and_return_list_wrong_comparison_for_text_fields(session_maker, 
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -657,7 +665,7 @@ def test_filter_and_return_list_wrong_comparison_for_text_fields(session_maker, 
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "id"), (Advertisement, "id"), (Advertisement, "user_id")))
-def test_filter_and_return_list_unexpected_columns_with__search_text__filter_type(session_maker, model_class, column):
+def test_filter_and_return_paginated_data_unexpected_columns_with__search_text__filter_type(session_maker, model_class, column):
     data = {"model_class": model_class,
             "filter_type": "search_text",
             "comparison": "",
@@ -665,7 +673,7 @@ def test_filter_and_return_list_unexpected_columns_with__search_text__filter_typ
             "column_value": "1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
+        filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
     assert filter_result.filtered_data is None
@@ -673,3 +681,52 @@ def test_filter_and_return_list_unexpected_columns_with__search_text__filter_typ
         "For filter_type='search_text' the folowing columns are available: "
         "{for <class 'app.models.User'>: [name, email], for <class 'app.models.Advertisement'>: [title, description]}"
     }
+
+# @pytest.mark.parametrize("creation_date_value", ("01.01.1900", "01/01/1900", "1-1-1900"))
+# def test_filter_and_return_paginated_data_with_wrong_creation_data_format_as_column_value_parameter(
+#         session_maker, create_test_users_and_advs, creation_date_value
+# ):
+#     session = session_maker
+#     with session() as sess:
+#         filter_result = filter_and_return_paginated_data(session=sess,
+#                                                                        model_class=models.Advertisement,  # type: ignore
+#                                                                        filter_type="column_value",  # type: ignore
+#                                                                        column="creation_date",  # type: ignore
+#                                                                        comparison="is",  # type: ignore
+#                                                                        column_value=creation_date_value)  # type: ignore
+#     assert filter_result.status == "Failed"
+#     assert filter_result.errors == [f"time data '{creation_date_value}' does not match format '%Y-%m-%d'"]
+#     assert filter_result.filtered_data is None
+#
+#
+# def test_filter_and_return_paginated_data_with_wrong_comparison_and_column_parameters(
+#         session_maker, create_test_users_and_advs, test_date
+# ):
+#     session = session_maker
+#     with session() as sess:
+#         filter_result = filter_and_return_paginated_data(session=sess,
+#                                                                        model_class=models.Advertisement,  # type: ignore
+#                                                                        filter_type="column_value",  # type: ignore
+#                                                                        column="wrong_column",  # type: ignore
+#                                                                        comparison="wrong_comparison",  # type: ignore
+#                                                                        column_value="test_filter")  # type: ignore
+#     assert filter_result.status == "Failed"
+#     assert filter_result.errors == ["Unexpected or missing 'column' parameter.",
+#                                     "Unexpected or missing 'comparison' parameter."]
+#     assert filter_result.filtered_data is None
+#
+#
+# def test_filter_and_return_paginated_data_with_wrong_filter_type_parameter(
+#         session_maker, create_test_users_and_advs, test_date
+# ):
+#     session = session_maker
+#     with session() as sess:
+#         filter_result = filter_and_return_paginated_data(session=sess,
+#                                                                        model_class=models.Advertisement,  # type: ignore
+#                                                                        filter_type="wrong_filter_type",  # type: ignore
+#                                                                        column="id",  # type: ignore
+#                                                                        comparison="is",  # type: ignore
+#                                                                        column_value="1000")  # type: ignore
+#     assert filter_result.status == "Failed"
+#     assert filter_result.errors == ["Unexpected or missing 'filter_type' parameter."]
+#     assert filter_result.filtered_data is None

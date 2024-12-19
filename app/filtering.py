@@ -83,7 +83,7 @@ class Filter:
     def validate_params(self, data: dict[str, Any], params: Type[Params]) -> None:
         data_dict = {}
         for param in params:
-            data_dict.update({param.value: data.get(param.value)})  # type: ignore
+            data_dict |= {param.value: data.get(param.value)}  # type: ignore
         if data_dict[Params.MODEL_CLASS] not in [mc.value for mc in ModelClasses]:
             self._add_error(Params.MODEL_CLASS, data_dict[Params.MODEL_CLASS], ValidParams.MODEL_CLASS.value)
         if data_dict[Params.FILTER_TYPE] not in ValidParams.FILTER_TYPE.value:
@@ -225,7 +225,7 @@ def filter_and_return_paginated_data(session: sqlalchemy.orm.Session,
                                      filter_type: FilterTypes | None = None,
                                      column: AdvertisementColumns | UserColumns | None = None,
                                      column_value: str | int | datetime | None = None,
-                                     comparison: Comparison = Comparison.IS,  # todo: why here is Comparison.IS?
+                                     comparison: Comparison | UserColumns | None = None,
                                      page: int | None = 1,
                                      per_page: int | None = 10) -> FilterResult:
     filter_result: FilterResult = Filter(session=session).paginate(
