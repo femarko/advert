@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Callable, Any
 
 from flask import request, Response
 from sqlalchemy.exc import IntegrityError
@@ -34,6 +35,7 @@ def get_related_advs(current_user_id: int, page: int, per_page: int, session) ->
                                                                    filter_type=FilterTypes.COLUMN_VALUE,
                                                                    column=AdvertisementColumns.USER_ID,
                                                                    column_value=current_user_id,
+                                                                   comparison=Comparison.IS,
                                                                    page=page,
                                                                    per_page=per_page)
     return filter_result

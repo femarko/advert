@@ -28,19 +28,24 @@ def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[s
         raise HttpError(status_code=400, description=validation_result.validation_errors)
 
 
+def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
+    filter_result = filter_func(**params)
+    if filter_result.status == "OK":
+        return filter_result.filtered_data
+    raise HttpError(status_code=400, description=filter_result.errors)
+
+
 @adv.route("/users/<int:user_id>/", methods=["GET"])
 @jwt_required()
 def get_user_data(user_id: int) -> tuple[Response, int]:
     current_user_id: int = authentication.check_current_user(user_id=user_id)
-    filter_result: FilterResult = service_layer.get_user(
-        column="id", column_value=current_user_id, session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            user: User = filter_result.filtered_data[0]
-            return jsonify(user.get_user_data()), 200
-        raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    user_list: list[User] = get_filter_result(filter_func=service_layer.get_user,
+                                              column="id",
+                                              column_value=current_user_id,
+                                              session=request.session)
+    if user_list:
+        return jsonify(user_list[0].get_user_data()), 200
+    raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
 
 
 @adv.route("/users/", methods=["POST"])
@@ -61,16 +66,14 @@ def update_user(user_id: int):
     validated_data = get_validation_result(validation_func=validation.validate_data,
                                            validation_model=validation.EditUser,
                                            data=request.json)
-    filter_result = service_layer.get_user(
-        column="id", column_value=current_user_id, session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            updated_user = service_layer.edit_model_instance(model_instance=filter_result.filtered_data[0],
-                                                             new_data=validated_data)
-            return jsonify({"modified user data": updated_user.get_user_data()}), 200
-        raise HttpError(status_code=404, description=f"User with {validated_data['id']=} is not found.")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    user_list: list[User] = get_filter_result(filter_func=service_layer.get_user,
+                                              column="id",
+                                              column_value=current_user_id,
+                                              session=request.session)
+    if user_list:
+        updated_user = service_layer.edit_model_instance(model_instance=user_list[0], new_data=validated_data)
+        return jsonify({"modified user data": updated_user.get_user_data()}), 200
+    raise HttpError(status_code=404, description=f"User with {validated_data['id']=} is not found.")
 
 
 @adv.route("/users/<int:user_id>/advertisements", methods=["GET"])
@@ -79,14 +82,21 @@ def get_related_advs(user_id: int):
     current_user_id: int = authentication.check_current_user(user_id=user_id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
-    result = service_layer.get_related_advs(current_user_id=current_user_id,
-                                            page=page,
-                                            per_page=per_page,
-                                            session=request.session)
-    if result.status == "OK":
-        return result, 200
-    else:
-        raise HttpError(status_code=400, description=result.errors)
+    result = get_filter_result(filter_func=service_layer.get_related_advs,
+                               current_user_id=current_user_id,
+                               page=page,
+                               per_page=per_page,
+                               session=request.session)
+    return result
+    #
+    # result = service_layer.get_related_advs(current_user_id=current_user_id,
+    #                                         page=page,
+    #                                         per_page=per_page,
+    #                                         session=request.session)
+    # if result.status == "OK":
+    #     return result, 200
+    # else:
+    #     raise HttpError(status_code=400, description=result.errors)
 
 
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])
