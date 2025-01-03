@@ -161,7 +161,9 @@ class Filter:
                                         datetime.strptime(column_value, "%Y-%m-%d"))
                 )
                 return QueryResult(query_object=filtered_query_object)
-            return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
+            qr = QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
+            return qr
+
         return QueryResult(status="Failed", errors=list(self.errors))
 
     def get_list(self,
@@ -196,11 +198,12 @@ class Filter:
                                           column=column,
                                           column_value=column_value)
         if query_result.status == "OK":
+            total: int = query_result.query_object.count()
             model_instances: list[ModelClass] = query_result.query_object.offset(offset).limit(per_page).all()
             paginated_data = {"page": page,
                               "per_page": per_page,
-                              "total": len(model_instances),
-                              "total_pages": (len(model_instances) + per_page - 1) // per_page,
+                              "total": total,
+                              "total_pages": (total + per_page - 1) // per_page,
                               "items": [model_instance for model_instance in model_instances]}
             filter_result: FilterResult = FilterResult(filtered_data=paginated_data)
         else:

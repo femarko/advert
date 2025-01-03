@@ -84,25 +84,25 @@ def create_test_users_and_advs(session_maker, test_date):
     session = session_maker
     with session() as sess:
         for i in range(1000, 1002):
-            user = {"id": i,
-                    "name": f"test_filter_{i}",
-                    "email": f"test_filter_{i}@email.com",
-                    "password": f"test_filter_{i}_pass"}
-            adv = {"title": f"test_filter_{i}",
-                   "description": f"test_filter_{i}",
-                   "user_id": i}
             sess.execute(sqlalchemy.text('INSERT INTO "user" (id, name, email, password, creation_date) '
                                          'VALUES (:id, :name, :email, :password, :creation_date)'),
-                         dict(id=user["id"],
-                              name=user["name"],
-                              email=user["email"],
-                              password=app.pass_hashing.hash_password(user["password"]),
+                         dict(id=i,
+                              name=f"test_filter_{i}",
+                              email=f"test_filter_{i}@email.com",
+                              password=app.pass_hashing.hash_password(f"test_filter_{i}_pass"),
                               creation_date=test_date))
             sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
                                          'VALUES (:id, :title, :description, :creation_date, :user_id)'),
                          dict(id=i,
-                              title=adv["title"],
-                              description=adv["description"],
+                              title=f"test_filter_{i}",
+                              description=f"test_filter_{i}",
+                              creation_date=test_date,
+                              user_id=i))
+            sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
+                                         'VALUES (:id, :title, :description, :creation_date, :user_id)'),
+                         dict(id=i+3,
+                              title=f"test_filter_{i+3}",
+                              description=f"test_filter_{i+3}",
                               creation_date=test_date,
                               user_id=i))
             sess.commit()

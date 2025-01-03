@@ -87,16 +87,8 @@ def get_related_advs(user_id: int):
                                page=page,
                                per_page=per_page,
                                session=request.session)
+    result["items"] = [item.get_adv_params() for item in result["items"]]
     return result
-    #
-    # result = service_layer.get_related_advs(current_user_id=current_user_id,
-    #                                         page=page,
-    #                                         per_page=per_page,
-    #                                         session=request.session)
-    # if result.status == "OK":
-    #     return result, 200
-    # else:
-    #     raise HttpError(status_code=400, description=result.errors)
 
 
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])

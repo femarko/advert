@@ -119,41 +119,91 @@ def test_update_user_with_incorrect_input_data(test_client, session_maker, acces
     assert response.json == {"error": "entry with id=10 is not found"}
 
 
-@pytest.mark.run(order=16)
-@pytest.mark.parametrize(
-    "url, page, adv_id",
-    (
-            ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page=", "1", 1000),
-            # ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page=", "2", 1000),
-            # ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1", "", 1000)
-    )
-)
-def test_get_related_advs_represented_in_two_pages(test_client, session_maker, access_token, url, page, adv_id):
-    response = test_client.get(f"{url}{page}", headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text(f'SELECT * FROM "adv" WHERE id = {adv_id}')).first()
+# @pytest.mark.run(order=16)
+# @pytest.mark.parametrize(
+#     "url, page, user_id",
+#     (
+#             # ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page=", "1", 1000),
+#             # ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page=", "2", 1000),
+#             ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1", "", 1000),
+#             # ("http://127.0.0.1:5000/users/1001/advertisements?per_page=1", "", 1001),
+#     )
+# )
+# def test_get_related_advs_represented_in_two_pages(test_client, session_maker, access_token, url, page, user_id):
+#     response = test_client.get(f"{url}{page}", headers={"Authorization": f"Bearer {access_token[f'user_{user_id}']}"})
+#     session = session_maker
+#     with session() as sess:
+#         data_from_db = sess.execute(sqlalchemy.text(f'SELECT * FROM "adv" WHERE user_id = {user_id}')).all()
+#     if page:
+#         assert_page = db_item = int(page)
+#     else:
+#         assert_page = 1
+#         db_item = 2
+#     assert response.status_code == 200
+#     assert response.json == {"items": [{"id": data_from_db[db_item-1][0],
+#                                         "title": data_from_db[db_item-1][1],
+#                                         "description": data_from_db[db_item-1][2],
+#                                         "creation_date": data_from_db[db_item-1][3].isoformat(),
+#                                         "user_id": data_from_db[db_item-1][4]}],
+#                              "page": assert_page,
+#                              "per_page": 1,
+#                              "total": 2,
+#                              "total_pages": 1}
+
+
+def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, test_date):
+    response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=2&page=1",
+                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     assert response.status_code == 200
-    assert response.json == {"items": [{"id": data_from_db[0],
-                                        "title": data_from_db[1],
-                                        "description": data_from_db[2],
-                                        "creation_date": data_from_db[3].isoformat(),
-                                        "user_id": data_from_db[4]}],
+    assert response.json == {"items": [{"id": 1000,
+                                        "title": f"test_filter_1000",
+                                        "description": "test_filter_1000",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000},
+                                       {"id": 1003,
+                                        "title": f"test_filter_1003",
+                                        "description": "test_filter_1003",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000}],
+                             "page": 1,
+                             "per_page": 2,
+                             "total": 2,
+                             "total_pages": 1}
+
+
+@pytest.mark.parametrize("page,adv_id", [(1, 1000), (2, 1003)])
+def test_get_related_advs_represented_in_two_pages(
+        test_client, session_maker, access_token, test_date, page, adv_id
+):
+    # with test_client as tc:
+    response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page={page}",
+                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+
+    assert response.status_code == 200
+    assert response.json == {"items": [{"id": adv_id,
+                                        "title": f"test_filter_{adv_id}",
+                                        "description": f"test_filter_{adv_id}",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000}],
                              "page": page,
                              "per_page": 1,
                              "total": 2,
                              "total_pages": 2}
 
+
+# def test_get_related_advs_represented_in_
+
+
 @pytest.mark.run(order=17)
 @pytest.mark.parametrize(
     "url, page",
     (
-            ("http://127.0.0.1:5000/users/1/advertisements", ""),
-            ("http://127.0.0.1:5000/users/1/advertisements?page=", "1")
+            ("http://127.0.0.1:5000/users/1000/advertisements", ""),
+            ("http://127.0.0.1:5000/users/1000/advertisements?page=", "1"),
     )
 )
-def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, url, page):
-    response = test_client.get(f"{url}{page}", headers={"Authorization": f"Bearer {access_token['user_1']}"})
+def test_get_related_advs_represented_in_one_page_(test_client, session_maker, access_token, url, page):
+    response = test_client.get(f"{url}{page}", headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     session = session_maker
     with session() as sess:
         data_from_db = sess.execute(sqlalchemy.text(f'SELECT * FROM "adv" WHERE user_id = 1')).all()
@@ -190,7 +240,7 @@ def test_get_related_advs_where_page_number_is_out_of_range(test_client, session
 
 @pytest.mark.run(order=19)
 def test_search_text(test_client, session_maker, create_test_users_and_advs):
-    response = test_client\
+    response = test_client \
         .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&column_value=st_f")
     session = session_maker
     with session() as sess:
