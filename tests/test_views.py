@@ -210,16 +210,37 @@ def test_get_related_advs_with_incorrect_page_and_per_page_params(
 
 
 @pytest.mark.run(order=19)
-def test_search_text(test_client, session_maker, create_test_users_and_advs):
+def test_search_advs_by_text(test_client, create_test_users_and_advs):
     response = test_client \
-        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&column_value=st_f")
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id=1000 UNION '
-                                                    'SELECT * FROM "adv" WHERE id=1001')).all()
+        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&column_value=01")
     assert response.status_code == 200
-    assert response.json["items"] == [{data_from_db[0][1]: data_from_db[0][2]},
-                                      {data_from_db[1][1]: data_from_db[1][2]}]
+    assert response.json == {"items": [{"test_filter_1001": "test_filter_1001"}],
+                             "page": 1,
+                             "per_page": 10,
+                             "total": 1,
+                             "total_pages": 1}
+
+
+def test_search_advs_by_text_where_text_is_missing(test_client, create_test_users_and_advs):
+    response = test_client \
+        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description")
+    assert response.status_code == 200
+    assert response.json == {"items": [],
+                             "page": 1,
+                             "per_page": 10,
+                             "total": 0,
+                             "total_pages": 0}
+
+
+def test_search_advs_by_text_where_text_is_not_found(test_client, create_test_users_and_advs):
+    response = test_client \
+        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&column_value=no_text")
+    assert response.status_code == 200
+    assert response.json == {"items": [],
+                             "page": 1,
+                             "per_page": 10,
+                             "total": 0,
+                             "total_pages": 0}
 
 
 @pytest.mark.run(order=20)
