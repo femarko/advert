@@ -1,5 +1,5 @@
 import pytest
-from app.filtering import Filter, Params, ValidParams
+from app.repository.filtering import Filter, Params
 from app.models import Advertisement, User
 
 

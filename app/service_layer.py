@@ -1,17 +1,16 @@
 from datetime import datetime
-from typing import Callable, Any
 
 from flask import request, Response
 from sqlalchemy.exc import IntegrityError
 
-from app import models, adv, filtering
+from app import models, adv
 from app.error_handlers import HttpError
-from app.filtering import filter_and_return_list, filter_and_return_paginated_data, FilterResult
+from app.repository.filtering import filter_and_return_list, filter_and_return_paginated_data, FilterResult
 
 import logging
 
 from app.models import ModelClass, User, Advertisement
-from app.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
+from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)

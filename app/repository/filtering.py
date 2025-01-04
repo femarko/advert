@@ -161,8 +161,7 @@ class Filter:
                                         datetime.strptime(column_value, "%Y-%m-%d"))
                 )
                 return QueryResult(query_object=filtered_query_object)
-            qr = QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
-            return qr
+            return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
 
         return QueryResult(status="Failed", errors=list(self.errors))
 

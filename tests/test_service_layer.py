@@ -1,9 +1,8 @@
 import sqlalchemy, pytest
 
 import app.authentication
-from app import service_layer, models
-from app.filtering import FilterResult
-from tests.conftest import access_token
+from app import service_layer
+from app.repository.filtering import FilterResult
 
 
 @pytest.mark.run(order=9)

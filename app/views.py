@@ -1,16 +1,12 @@
-from datetime import datetime
 from typing import Callable, Any, Type
 
-import flask
-import sqlalchemy.orm
 from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required
 
-import app.authentication
-from app import adv, models, pass_hashing, validation, service_layer, authentication, filtering
+from app import adv, models, pass_hashing, validation, service_layer, authentication
 from app.error_handlers import HttpError
-from app.filtering import FilterResult
-from app.models import ModelClass, Advertisement, User
+from app.repository.filtering import FilterResult
+from app.models import Advertisement, User
 
 #  todo: whether all urls have authorization check: if user_id == authentication.get_authenticated_user_identity(): ...
 #  todo: put all HttpErrors in views.py

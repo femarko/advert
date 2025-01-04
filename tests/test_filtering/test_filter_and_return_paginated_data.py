@@ -1,14 +1,8 @@
-from typing import Any
-from datetime import datetime
-
 import pytest
-import sqlalchemy.orm
 
-import app.filtering
-from app import models
+import app.repository.filtering
 from app.models import User, Advertisement
-from app.error_handlers import HttpError
-from app.filtering import Filter, ValidParams, Params, filter_and_return_paginated_data, FilterResult
+from app.repository.filtering import filter_and_return_paginated_data, FilterResult
 
 
 @pytest.mark.parametrize(
@@ -70,7 +64,7 @@ def test_filter_and_return_paginated_data_with_correct_params(
     session = session_maker
     with session() as sess:
         filter_result = filter_and_return_paginated_data(session=sess, **params)
-    assert type(filter_result) is app.filtering.FilterResult
+    assert type(filter_result) is app.repository.filtering.FilterResult
     assert filter_result.status == "OK"
     assert type(filter_result.filtered_data) is dict
     assert filter_result.filtered_data["page"] == 1

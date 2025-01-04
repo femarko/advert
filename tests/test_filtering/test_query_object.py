@@ -1,7 +1,7 @@
 import pytest
 import sqlalchemy
 
-from app.filtering import Filter, Params, QueryResult
+from app.repository.filtering import Filter, QueryResult
 from app.models import User, Advertisement
 
 

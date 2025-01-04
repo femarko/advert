@@ -1,9 +1,7 @@
 import pytest
-import sqlalchemy
 
-from app import models
 from app.models import User, Advertisement
-from app.filtering import filter_and_return_list, FilterResult
+from app.repository.filtering import filter_and_return_list, FilterResult
 
 
 @pytest.mark.parametrize(

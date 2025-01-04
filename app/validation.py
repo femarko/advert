@@ -1,12 +1,6 @@
 import pydantic
-from typing import TypeVar, Type, Union, Optional, Any, NamedTuple, Literal
-from datetime import datetime
+from typing import TypeVar, Type, Any, Literal
 from dataclasses import dataclass
-
-from app.filtering import FilterTypes, Comparison
-from app.models import AdvertisementColumns, UserColumns, User, Advertisement, Model
-from app.error_handlers import HttpError
-
 
 PydanticModel = TypeVar("PydanticModel", bound=pydantic.BaseModel)
 
