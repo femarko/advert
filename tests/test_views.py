@@ -63,18 +63,14 @@ def test_create_adv(test_client, session_maker, engine, adv_params, user, adv_id
 
 
 @pytest.mark.run(order=12)
-def test_get_user_data(test_client, session_maker, access_token):
+def test_get_user_data(test_client, access_token, test_date):
     response = test_client.get("http://127.0.0.1:5000/users/1000/",
                                headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = \
-            sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1000')).first()
-    # assert response.status_code == 200
-    assert response.json == {"id": data_from_db[0],
-                             "name": data_from_db[1],
-                             "email": data_from_db[2],
-                             "creation_date": data_from_db[3].isoformat()}
+    assert response.status_code == 200
+    assert response.json == {"id": 1000,
+                             "name": f"test_filter_1000",
+                             "email": "test_filter_1000@email.com",
+                             "creation_date": test_date.isoformat()}
 
 
 @pytest.mark.run(order=13)
@@ -119,38 +115,6 @@ def test_update_user_with_incorrect_input_data(test_client, session_maker, acces
     assert response.json == {"error": "entry with id=10 is not found"}
 
 
-# @pytest.mark.run(order=16)
-# @pytest.mark.parametrize(
-#     "url, page, user_id",
-#     (
-#             # ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page=", "1", 1000),
-#             # ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page=", "2", 1000),
-#             ("http://127.0.0.1:5000/users/1000/advertisements?per_page=1", "", 1000),
-#             # ("http://127.0.0.1:5000/users/1001/advertisements?per_page=1", "", 1001),
-#     )
-# )
-# def test_get_related_advs_represented_in_two_pages(test_client, session_maker, access_token, url, page, user_id):
-#     response = test_client.get(f"{url}{page}", headers={"Authorization": f"Bearer {access_token[f'user_{user_id}']}"})
-#     session = session_maker
-#     with session() as sess:
-#         data_from_db = sess.execute(sqlalchemy.text(f'SELECT * FROM "adv" WHERE user_id = {user_id}')).all()
-#     if page:
-#         assert_page = db_item = int(page)
-#     else:
-#         assert_page = 1
-#         db_item = 2
-#     assert response.status_code == 200
-#     assert response.json == {"items": [{"id": data_from_db[db_item-1][0],
-#                                         "title": data_from_db[db_item-1][1],
-#                                         "description": data_from_db[db_item-1][2],
-#                                         "creation_date": data_from_db[db_item-1][3].isoformat(),
-#                                         "user_id": data_from_db[db_item-1][4]}],
-#                              "page": assert_page,
-#                              "per_page": 1,
-#                              "total": 2,
-#                              "total_pages": 1}
-
-
 def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, test_date):
     response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=2&page=1",
                                headers={"Authorization": f"Bearer {access_token['user_1000']}"})
@@ -171,14 +135,12 @@ def test_get_related_advs_represented_in_one_page(test_client, session_maker, ac
                              "total_pages": 1}
 
 
-@pytest.mark.parametrize("page,adv_id", [(1, 1000), (2, 1003)])
+@pytest.mark.parametrize("page,adv_id", ((1, 1000), (2, 1003)))
 def test_get_related_advs_represented_in_two_pages(
         test_client, session_maker, access_token, test_date, page, adv_id
 ):
-    # with test_client as tc:
     response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page={page}",
                                headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-
     assert response.status_code == 200
     assert response.json == {"items": [{"id": adv_id,
                                         "title": f"test_filter_{adv_id}",
@@ -191,48 +153,57 @@ def test_get_related_advs_represented_in_two_pages(
                              "total_pages": 2}
 
 
-# def test_get_related_advs_represented_in_
-
-
-@pytest.mark.run(order=17)
-@pytest.mark.parametrize(
-    "url, page",
-    (
-            ("http://127.0.0.1:5000/users/1000/advertisements", ""),
-            ("http://127.0.0.1:5000/users/1000/advertisements?page=", "1"),
-    )
-)
-def test_get_related_advs_represented_in_one_page_(test_client, session_maker, access_token, url, page):
-    response = test_client.get(f"{url}{page}", headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text(f'SELECT * FROM "adv" WHERE user_id = 1')).all()
-    assert response.status_code == 200
-    assert response.json == {"items": [
-        {"id": data_from_db[0][0],
-         "title": data_from_db[0][1],
-         "description": data_from_db[0][2],
-         "creation_date": data_from_db[0][3].isoformat(),
-         "user_id": data_from_db[0][4]},
-        {"id": data_from_db[1][0],
-         "title": data_from_db[1][1],
-         "description": data_from_db[1][2],
-         "creation_date": data_from_db[1][3].isoformat(),
-         "user_id": data_from_db[1][4]},
-    ],
-        "page": 1,
-        "per_page": 10,
-        "total": 2,
-        "total_pages": 1}
-
-
 @pytest.mark.run(order=18)
 def test_get_related_advs_where_page_number_is_out_of_range(test_client, session_maker, access_token):
-    response = test_client.get("http://127.0.0.1:5000/users/1/advertisements?page=100",
-                               headers={"Authorization": f"Bearer {access_token['user_1']}"})
+    response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements?page=100",
+                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     assert response.status_code == 200
     assert response.json == {"items": [],
                              "page": 100,
+                             "per_page": 10,
+                             "total": 2,
+                             "total_pages": 1}
+
+
+def test_get_related_advs_where_page_and_per_page_params_are_not_passed(
+        test_client, session_maker, access_token, test_date
+):
+    response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements",
+                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+    assert response.status_code == 200
+    assert response.json == {"items": [{"id": 1000,
+                                        "title": f"test_filter_1000",
+                                        "description": "test_filter_1000",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000},
+                                       {"id": 1003,
+                                        "title": f"test_filter_1003",
+                                        "description": "test_filter_1003",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000}],
+                             "page": 1,
+                             "per_page": 10,
+                             "total": 2,
+                             "total_pages": 1}
+
+
+def test_get_related_advs_with_incorrect_page_and_per_page_params(
+        test_client, session_maker, access_token, test_date
+):
+    response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements?per_page=error&page=error",
+                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+    assert response.status_code == 200
+    assert response.json == {"items": [{"id": 1000,
+                                        "title": f"test_filter_1000",
+                                        "description": "test_filter_1000",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000},
+                                       {"id": 1003,
+                                        "title": f"test_filter_1003",
+                                        "description": "test_filter_1003",
+                                        "creation_date": test_date.isoformat(),
+                                        "user_id": 1000}],
+                             "page": 1,
                              "per_page": 10,
                              "total": 2,
                              "total_pages": 1}
