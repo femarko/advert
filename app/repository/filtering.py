@@ -162,7 +162,6 @@ class Filter:
                 )
                 return QueryResult(query_object=filtered_query_object)
             return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
-
         return QueryResult(status="Failed", errors=list(self.errors))
 
     def get_list(self,

@@ -11,7 +11,7 @@ POSTGRES_DSN = f"postgresql://adv:secret@127.0.0.1:5431/adv"
 
 engine = create_engine(POSTGRES_DSN)
 
-Session = sessionmaker(bind=engine)
+session_maker = sessionmaker(bind=engine)
 
 
 class Base(DeclarativeBase):

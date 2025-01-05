@@ -81,8 +81,7 @@ def get_related_advs(user_id: int):
     result = get_filter_result(filter_func=service_layer.get_related_advs,
                                current_user_id=current_user_id,
                                page=page,
-                               per_page=per_page,
-                               session=request.session)
+                               per_page=per_page)
     result["items"] = [item.get_adv_params() for item in result["items"]]
     return result
 

@@ -11,6 +11,7 @@ import logging
 
 from app.models import ModelClass, User, Advertisement
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
+from app.unit_of_work import UnitOfWork
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
@@ -18,7 +19,7 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 @adv.before_request
 def before_request() -> None:
-    session = models.Session()
+    session = models.session_maker()
     request.session = session
 
 
@@ -28,15 +29,16 @@ def after_request(response: Response) -> Response:
     return response
 
 
-def get_related_advs(current_user_id: int, page: int, per_page: int, session) -> FilterResult:
-    filter_result: FilterResult = filter_and_return_paginated_data(session=session,
-                                                                   model_class=Advertisement,
-                                                                   filter_type=FilterTypes.COLUMN_VALUE,
-                                                                   column=AdvertisementColumns.USER_ID,
-                                                                   column_value=current_user_id,
-                                                                   comparison=Comparison.IS,
-                                                                   page=page,
-                                                                   per_page=per_page)
+def get_related_advs(current_user_id: int, page: int, per_page: int) -> FilterResult:
+    with UnitOfWork() as uow:
+        filter_result = uow.repository.get_paginated(filter_func=filter_and_return_paginated_data,
+                                                     model_class=Advertisement,
+                                                     filter_type=FilterTypes.COLUMN_VALUE,
+                                                     column=AdvertisementColumns.USER_ID,
+                                                     column_value=current_user_id,
+                                                     comparison=Comparison.IS,
+                                                     page=page,
+                                                     per_page=per_page)
     return filter_result
 
 

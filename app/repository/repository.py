@@ -12,7 +12,8 @@ class Repository:
         return filter_func(session=self.session, **params)
 
     def get_paginated(self, filter_func: Callable, **params: Any):
-        return filter_func(session=self.session, **params)
+        filter_res = filter_func(session=self.session, **params)
+        return filter_res
 
     def delete(self, model_instance):
         self.session.delete(model_instance)
