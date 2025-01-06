@@ -11,6 +11,7 @@ import logging
 
 from app.models import ModelClass, User, Advertisement
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
+from app.repository.repository import Repository
 from app.unit_of_work import UnitOfWork
 
 logging.basicConfig()
@@ -29,10 +30,9 @@ def after_request(response: Response) -> Response:
     return response
 
 
-def get_related_advs(current_user_id: int, page: int, per_page: int) -> FilterResult:
-    with UnitOfWork() as uow:
-        filter_result = uow.repository.get_paginated(filter_func=filter_and_return_paginated_data,
-                                                     model_class=Advertisement,
+def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> FilterResult:
+    with uow:
+        filter_result = uow.repository.get_paginated(model_class=Advertisement,
                                                      filter_type=FilterTypes.COLUMN_VALUE,
                                                      column=AdvertisementColumns.USER_ID,
                                                      column_value=current_user_id,

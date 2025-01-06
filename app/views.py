@@ -7,6 +7,7 @@ from app import adv, models, pass_hashing, validation, service_layer, authentica
 from app.error_handlers import HttpError
 from app.repository.filtering import FilterResult
 from app.models import Advertisement, User
+from app.unit_of_work import UnitOfWork
 
 #  todo: whether all urls have authorization check: if user_id == authentication.get_authenticated_user_identity(): ...
 #  todo: put all HttpErrors in views.py
@@ -81,7 +82,8 @@ def get_related_advs(user_id: int):
     result = get_filter_result(filter_func=service_layer.get_related_advs,
                                current_user_id=current_user_id,
                                page=page,
-                               per_page=per_page)
+                               per_page=per_page,
+                               uow=UnitOfWork())
     result["items"] = [item.get_adv_params() for item in result["items"]]
     return result
 
