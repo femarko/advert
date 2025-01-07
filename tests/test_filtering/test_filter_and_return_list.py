@@ -1,7 +1,8 @@
 import pytest
 
 from app.models import User, Advertisement
-from app.repository.filtering import filter_and_return_list, FilterResult
+from app.repository.filtering import filter_and_return_list, FilterResult, InvalidFilterParams
+from tests.conftest import session_maker, engine
 
 
 @pytest.mark.parametrize(
@@ -46,7 +47,7 @@ from app.repository.filtering import filter_and_return_list, FilterResult
       "filter_type": "search_text",
       "column": "title",
       "column_value": "ilt",
-      "comparison":""},
+      "comparison": ""},
      {"model_class": User,
       "filter_type": "column_value",
       "column": "id",
@@ -83,21 +84,19 @@ def test_filter_and_return_list_all_params_are_wrong(session_maker):
               "column_value": "wrong_param"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **params)
-    assert isinstance(filter_result, FilterResult)
-    assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
-    assert filter_result.errors == {
+        with pytest.raises(InvalidFilterParams) as e:
+            filter_and_return_list(session=sess, **params)
+    assert e.value.args[0] == str(list({
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. "
         f"Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
-        f'\'wrong_param\' is invalid value for \'column\'. Valid values: '
+        f"'wrong_param' is invalid value for 'column'. Valid values: "
         f'{{"for <class \'app.models.User\'>": [\'id\', \'name\', \'email\', \'creation_date\'], '
         f'"for <class \'app.models.Advertisement\'>": '
         f'[\'id\', \'title\', \'description\', \'creation_date\', \'user_id\']}}.'
-    }
+    }))
 
 
 def test_filter_and_return_list_all_params_are_missing(session_maker):
@@ -148,12 +147,10 @@ def test_filter_and_return_list_wrong__model_class(session_maker):
             "column_value": "test_filter_1000"}
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **data)
-    assert isinstance(filter_result, FilterResult)
-    assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
-    assert filter_result.errors == {f"'wrong_param' is invalid value for 'model_class'. "
-                                    f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>]."}
+        with pytest.raises(InvalidFilterParams) as e:
+            filter_and_return_list(session=sess, **data)
+    assert e.value.args[0] == str([f"'wrong_param' is invalid value for 'model_class'. "
+                                   f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>]."])
 
 
 @pytest.mark.parametrize("model_class,column", ((User, "name"), (Advertisement, "title")))
