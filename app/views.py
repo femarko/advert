@@ -85,7 +85,7 @@ def get_related_advs(user_id: int):
         result = service_layer.get_related_advs(current_user_id=current_user_id,
                                                 page=page,
                                                 per_page=per_page,
-                                                uow=UnitOfWork(repository=AdvRepository))
+                                                uow=UnitOfWork())
         return result, 200
     except app.repository.filtering.InvalidFilterParams as e:
         return str(e), 400
