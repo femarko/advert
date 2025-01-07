@@ -3,9 +3,11 @@ from typing import Callable, Any, Type
 from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required
 
+import app.repository.filtering
 from app import adv, models, pass_hashing, validation, service_layer, authentication
 from app.error_handlers import HttpError
 from app.repository.filtering import FilterResult
+from app.repository.repository import UserRepository, AdvRepository
 from app.models import Advertisement, User
 from app.unit_of_work import UnitOfWork
 
@@ -79,13 +81,14 @@ def get_related_advs(user_id: int):
     current_user_id: int = authentication.check_current_user(user_id=user_id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
-    result = get_filter_result(filter_func=service_layer.get_related_advs,
-                               current_user_id=current_user_id,
-                               page=page,
-                               per_page=per_page,
-                               uow=UnitOfWork())
-    result["items"] = [item.get_adv_params() for item in result["items"]]
-    return result
+    try:
+        result = service_layer.get_related_advs(current_user_id=current_user_id,
+                                                page=page,
+                                                per_page=per_page,
+                                                uow=UnitOfWork(repository=AdvRepository))
+        return result, 200
+    except app.repository.filtering.InvalidFilterParams as e:
+        return str(e), 400
 
 
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])

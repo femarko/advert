@@ -1,5 +1,5 @@
 from typing import Callable, Any, Protocol
-from filtering import Filter, FilterResult, filter_and_return_list, filter_and_return_paginated_data
+from .filtering import Filter, FilterResult, filter_and_return_list, filter_and_return_paginated_data
 from app.models import User, Advertisement
 
 

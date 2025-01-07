@@ -30,16 +30,16 @@ def after_request(response: Response) -> Response:
     return response
 
 
-def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> FilterResult:
+def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dict[str, int | list[ModelClass]]:
     with uow:
-        filter_result = uow.repository.get_paginated(model_class=Advertisement,
-                                                     filter_type=FilterTypes.COLUMN_VALUE,
+        filter_result = uow.repository.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
                                                      column=AdvertisementColumns.USER_ID,
                                                      column_value=current_user_id,
                                                      comparison=Comparison.IS,
                                                      page=page,
                                                      per_page=per_page)
-    return filter_result
+        filter_result.filtered_data["items"] = [item.get_adv_params() for item in filter_result.filtered_data["items"]]
+    return filter_result.filtered_data
 
 
 def get_user(column: UserColumns, column_value: str | int | datetime, session) -> FilterResult:

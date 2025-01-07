@@ -1,14 +1,18 @@
+from typing import Protocol
+
+import app.repository.repository
 from app.models import session_maker
 from app.repository.repository import Repository
 
 
 class UnitOfWork:
-    def __init__(self):
+    def __init__(self, repository):
         self.session_maker = session_maker
+        self.repository = repository
 
     def __enter__(self):
         self.session = self.session_maker()
-        self.repository = Repository(session=self.session)
+        self.repository = self.repository(session=self.session)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
