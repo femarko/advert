@@ -182,8 +182,8 @@ class Filter:
         if query_result.status == "OK":
             filter_result: FilterResult = FilterResult(filtered_data=query_result.query_object.all())
         else:
-            # filter_result: FilterResult = FilterResult(status="Failed", errors=query_result.errors)
-            raise InvalidFilterParams(f"{query_result.errors}")
+            filter_result: FilterResult = FilterResult(status="Failed", errors=query_result.errors)
+            # raise InvalidFilterParams(f"{query_result.errors}")
         return filter_result
 
     def paginate(self,
@@ -210,8 +210,8 @@ class Filter:
                               "items": [model_instance for model_instance in model_instances]}
             filter_result: FilterResult = FilterResult(filtered_data=paginated_data)
         else:
-            # filter_result: FilterResult = FilterResult(status="Failed", errors=query_result.errors)
-            raise InvalidFilterParams(f"{query_result.errors}")
+            filter_result: FilterResult = FilterResult(status="Failed", errors=query_result.errors)
+            # raise InvalidFilterParams(f"{query_result.errors}")
         return filter_result
 
 

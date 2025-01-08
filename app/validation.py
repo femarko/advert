@@ -61,14 +61,19 @@ class Login(pydantic.BaseModel):
 
 @dataclass
 class ValidationResult:
-    validated_data: dict[Any, Any] | None = None
-    validation_errors: list[str] | None = None
+    result: dict[Any, Any] | None = None
+    errors: list[str] | None = None
     status: Literal["OK", "Failed"] = "OK"
 
 
 def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -> ValidationResult:
     try:
-        return ValidationResult(validated_data=validation_model.model_validate(data).model_dump(exclude_unset=True))
+        return ValidationResult(result=validation_model.model_validate(data).model_dump(exclude_unset=True))
     except pydantic.ValidationError as err:
         errors_list: list = err.errors()
-        return ValidationResult(status="Failed", validation_errors=errors_list)
+        return ValidationResult(status="Failed", errors=errors_list)
+
+
+def validate_login_credentials(**credentials):
+    return validate_data(validation_model=Login, data={**credentials})
+

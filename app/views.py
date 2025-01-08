@@ -38,7 +38,7 @@ def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
 @jwt_required()
 def get_user_data(user_id: int) -> tuple[Response, int]:
     current_user_id: int = authentication.check_current_user(user_id=user_id)
-    user_list: list[User] = get_filter_result(filter_func=service_layer.get_user,
+    user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
                                               column="id",
                                               column_value=current_user_id,
                                               session=request.session)
@@ -65,7 +65,7 @@ def update_user(user_id: int):
     validated_data = get_validation_result(validation_func=validation.validate_data,
                                            validation_model=validation.EditUser,
                                            data=request.json)
-    user_list: list[User] = get_filter_result(filter_func=service_layer.get_user,
+    user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
                                               column="id",
                                               column_value=current_user_id,
                                               session=request.session)
@@ -94,7 +94,7 @@ def get_related_advs(user_id: int):
 @jwt_required()
 def delete_user(user_id: int):
     current_user_id: int = authentication.check_current_user(user_id=user_id)
-    filter_result: FilterResult = service_layer.get_user(
+    filter_result: FilterResult = service_layer.get_users_list(
         column="id", column_value=current_user_id, session=request.session  # type: ignore
     )
     if filter_result.status == "OK":
@@ -199,16 +199,13 @@ def delete_adv(adv_id: int):
 @adv.route("/login/", methods=["POST"])
 def login():
     try:
-        service_layer.login(uow=UnitOfWork(), **request.json)
-        user_list: list[User] = service_layer.get_user(
-            column="email", column_value=validated_data["email"], uow=UnitOfWork()  # type: ignore
-        )
-        if pass_hashing.check_password(password=validated_data["password"], hashed_password=user_list[0].password):
-            access_token: str = authentication.get_access_token(identity=user_list[0].id)
-            return jsonify({"access_token": access_token}), 200
-        raise HttpError(status_code=400, description="Incorrect email or password")
-    except service_layer.NotFound:
-        raise HttpError(status_code=400, description="Incorrect email or password")
-    except (app.repository.filtering.InvalidFilterParams, service_layer.ValidationFailed) as e:
+        access_token = service_layer.jwt_auth(validate_func=validation.validate_login_credentials,
+                                              check_pass_func=pass_hashing.check_password,
+                                              grant_access_func=authentication.get_access_token,
+                                              credentials=request.json,
+                                              uow=UnitOfWork())
+        return jsonify({"access_token": access_token}), 200
+    except service_layer.AccessDenied as e:
+        raise HttpError(status_code=401, description=str(e))
+    except service_layer.ValidationFailed as e:
         raise HttpError(status_code=400, description=str(e))
-

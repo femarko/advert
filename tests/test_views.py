@@ -328,22 +328,22 @@ def test_login_with_correct_credentials(test_client, app_context):
     assert response.status_code == 200
     assert response.json["access_token"]
     assert type(response.json["access_token"]) == str
-    assert len(response.json["access_token"]) > 0
+    assert len(response.json["access_token"]) >= 32
 
 
 @pytest.mark.run(order=26)
 @pytest.mark.parametrize(
     "input_data",
     (
-            # {"email": "incorrect@email.com", "password": "incorrect_password"},
+            {"email": "incorrect@email.com", "password": "incorrect_password"},
             {"email": "test_2@email.com", "password": "incorrect_password"},
-            # {"email": "incorrect@email.com", "password": "incorrect_password"}
+            {"email": "incorrect@email.com", "password": "incorrect_password"}
     )
 )
 def test_login_with_incorrect_credentials(test_client, app_context, input_data):
     response = test_client.post("http://127.0.0.1:5000/login/", json=input_data)
     assert response.status_code == 401
-    assert response.json == {"errors": "Incorrect email or password"}
+    assert response.json == {"errors": "Invalid credentials."}
 
 
 @pytest.mark.run(order=27)
@@ -357,9 +357,7 @@ def test_login_with_incorrect_credentials(test_client, app_context, input_data):
 def test_login_with_incomplete_credentials(test_client, input_data, missed_field):
     response = test_client.post("http://127.0.0.1:5000/login/", json=input_data)
     assert response.status_code == 400
-    assert response.json["errors"]
-    assert response.json["errors"][0]["input"] == input_data
-    assert response.json["errors"][0]["loc"][0] == missed_field
-    assert response.json["errors"][0]["msg"] == "Field required"
-    assert response.json["errors"][0]["type"] == "missing"
-    assert response.json["errors"][0]["url"] == "https://errors.pydantic.dev/2.9/v/missing"
+    assert response.json == {
+        "errors": f"[{{'type': 'missing', 'loc': ('{missed_field}',), 'msg': 'Field required', 'input': {input_data}, "
+                  f"'url': 'https://errors.pydantic.dev/2.9/v/missing'}}]"
+    }

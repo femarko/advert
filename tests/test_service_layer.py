@@ -16,7 +16,7 @@ def test_get_user(session_maker):
     session = session_maker
     email = "test_1@email.com"
     with session() as sess:
-        filter_result: FilterResult = service_layer.get_user(
+        filter_result: FilterResult = service_layer.get_users_list(
             column="email", column_value=email, session=sess  # type: ignore
         )
     with session() as sess:

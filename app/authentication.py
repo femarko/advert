@@ -5,13 +5,14 @@ from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity
 from app import adv
 from app.error_handlers import HttpError
 from app.models import UserColumns, AdvertisementColumns
+from app.base_resut import BaseResult
 
 jwt = JWTManager(app=adv)
 
 
 def get_access_token(identity: UserColumns) -> str:
     """
-    Create access token for user authentication, utilizing ``flask_jwt_extended.create_access_token()``.
+    Creates access token for user authentication, utilizing flask_jwt_extended.create_access_token().
 
     :param identity: a User model attribute
     :type identity: Any
@@ -56,3 +57,4 @@ def check_current_user(user_id: int | None = None, get_cuid: bool = True) -> int
         else:
             return
     raise HttpError(status_code=403, description="Forbidden.")
+# todo: HttpError shouldn't be raised here: to implement BaseRusult or to raise some other (specific) error instead?
