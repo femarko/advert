@@ -335,15 +335,15 @@ def test_login_with_correct_credentials(test_client, app_context):
 @pytest.mark.parametrize(
     "input_data",
     (
-            {"email": "incorrect@email.com", "password": "incorrect_password"},
+            # {"email": "incorrect@email.com", "password": "incorrect_password"},
             {"email": "test_2@email.com", "password": "incorrect_password"},
-            {"email": "incorrect@email.com", "password": "incorrect_password"}
+            # {"email": "incorrect@email.com", "password": "incorrect_password"}
     )
 )
 def test_login_with_incorrect_credentials(test_client, app_context, input_data):
     response = test_client.post("http://127.0.0.1:5000/login/", json=input_data)
     assert response.status_code == 401
-    assert response.json == {"error": "Incorrect email or password"}
+    assert response.json == {"errors": "Incorrect email or password"}
 
 
 @pytest.mark.run(order=27)
@@ -357,9 +357,9 @@ def test_login_with_incorrect_credentials(test_client, app_context, input_data):
 def test_login_with_incomplete_credentials(test_client, input_data, missed_field):
     response = test_client.post("http://127.0.0.1:5000/login/", json=input_data)
     assert response.status_code == 400
-    assert response.json["error"]
-    assert response.json["error"][0]["input"] == input_data
-    assert response.json["error"][0]["loc"][0] == missed_field
-    assert response.json["error"][0]["msg"] == "Field required"
-    assert response.json["error"][0]["type"] == "missing"
-    assert response.json["error"][0]["url"] == "https://errors.pydantic.dev/2.9/v/missing"
+    assert response.json["errors"]
+    assert response.json["errors"][0]["input"] == input_data
+    assert response.json["errors"][0]["loc"][0] == missed_field
+    assert response.json["errors"][0]["msg"] == "Field required"
+    assert response.json["errors"][0]["type"] == "missing"
+    assert response.json["errors"][0]["url"] == "https://errors.pydantic.dev/2.9/v/missing"

@@ -3,12 +3,19 @@ from .filtering import Filter, FilterResult, filter_and_return_list, filter_and_
 from app.models import User, Advertisement
 
 
+class NotFound(Exception):
+    pass
+
+
 class Repository(Protocol):
     def __init__(self, session):
         self.session = session
 
     def add(self, model_instance):
         pass
+
+    def get(self, **kwargs):
+        return self.session.get(**kwargs)
 
     def get_list(self, **params: Any):
         pass
@@ -20,13 +27,19 @@ class Repository(Protocol):
         pass
 
 
-class UserRepository():
+class UserRepository:
     def __init__(self, session):
         self.session = session
         self.model_cl = User
 
-    def add(self, model_instance):
-        return self.session.add(model_instance)
+    def add(self, user_instance):
+        return self.session.add(user_instance)
+
+    def get(self, user_id: int):
+        user_instance = self.session.get(self.model_cl, user_id)
+        if user_instance is not None:
+            return user_instance
+        raise NotFound(f"User with id {user_id} is not found.")
 
     def get_list(self, filter_type, comparison, column, column_value) -> FilterResult:
         filter_result = filter_and_return_list(session=self.session,
@@ -48,17 +61,20 @@ class UserRepository():
                                                       per_page=per_page)
         return filter_res
 
-    def delete(self, model_instance):
-        self.session.delete(model_instance)
+    def delete(self, user_instance):
+        self.session.delete(user_instance)
 
 
-class AdvRepository():
+class AdvRepository:
     def __init__(self, session):
         self.session = session
         self.model_cl = Advertisement
 
-    def add(self, model_instance):
-        return self.session.add(model_instance)
+    def add(self, adv_instance):
+        return self.session.add(adv_instance)
+
+    def get(self, adv_instance, adv_id):
+        return self.session.get(adv_instance, adv_id)
 
     def get_list(self, filter_type, comparison, column, column_value) -> FilterResult:
         filter_result = filter_and_return_list(session=self.session,
@@ -80,5 +96,5 @@ class AdvRepository():
                                                          per_page=per_page)
         return filter_result
 
-    def delete(self, model_instance):
-        self.session.delete(model_instance)
+    def delete(self, adv_instance):
+        self.session.delete(adv_instance)

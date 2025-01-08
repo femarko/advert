@@ -82,13 +82,12 @@ def get_related_advs(user_id: int):
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     try:
-        result = service_layer.get_related_advs(current_user_id=current_user_id,
-                                                page=page,
-                                                per_page=per_page,
-                                                uow=UnitOfWork())
+        result = service_layer.get_related_advs(
+            current_user_id=current_user_id, page=page, per_page=per_page, uow=UnitOfWork()
+        )
         return result, 200
     except app.repository.filtering.InvalidFilterParams as e:
-        return str(e), 400
+        raise HttpError(status_code=400, description=str(e))
 
 
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])
@@ -199,17 +198,17 @@ def delete_adv(adv_id: int):
 
 @adv.route("/login/", methods=["POST"])
 def login():
-    validation_result: ValidationResult = validation.validate_data(validation_model=validation.Login, data=request.json)
-    validated_data = validation_result.validated_data
-    filter_result: FilterResult = service_layer.get_user(
-        column="email", column_value=validated_data["email"], session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            user: User = filter_result.filtered_data[0]
-            if pass_hashing.check_password(password=validated_data["password"], hashed_password=user.password):
-                access_token: str = authentication.get_access_token(identity=user.id)
-                return jsonify({"access_token": access_token}), 200
-            raise HttpError(status_code=401, description="Incorrect email or password")
-        raise HttpError(status_code=401, description=f"Incorrect email or password")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    try:
+        service_layer.login(uow=UnitOfWork(), **request.json)
+        user_list: list[User] = service_layer.get_user(
+            column="email", column_value=validated_data["email"], uow=UnitOfWork()  # type: ignore
+        )
+        if pass_hashing.check_password(password=validated_data["password"], hashed_password=user_list[0].password):
+            access_token: str = authentication.get_access_token(identity=user_list[0].id)
+            return jsonify({"access_token": access_token}), 200
+        raise HttpError(status_code=400, description="Incorrect email or password")
+    except service_layer.NotFound:
+        raise HttpError(status_code=400, description="Incorrect email or password")
+    except (app.repository.filtering.InvalidFilterParams, service_layer.ValidationFailed) as e:
+        raise HttpError(status_code=400, description=str(e))
+
