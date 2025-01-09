@@ -65,11 +65,11 @@ def test_query_object_with_correct_params(session_maker, create_test_users_and_a
         query_result = Filter(session=sess)._query_object(**params)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "OK"
-    assert type(query_result.query_object) == sqlalchemy.orm.Query
-    for item in query_result.query_object.all():
+    assert type(query_result.result) == sqlalchemy.orm.Query
+    for item in query_result.result.all():
         assert isinstance(item, params["model_class"])
-    assert query_result.query_object.all()[0].id == 1000
-    assert query_result.query_object.all()[1].id == 1001
+    assert query_result.result.all()[0].id == 1000
+    assert query_result.result.all()[1].id == 1001
     assert query_result.errors is None
 
 
@@ -85,7 +85,7 @@ def test_query_object_all_params_are_wrong(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -107,7 +107,7 @@ def test_query_object_all_params_are_missing(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"Value for 'model_class' is not found.",
                                    f"Value for 'filter_type' is not found.",
                                    f"Value for 'comparison' is not found.",
@@ -126,7 +126,7 @@ def test_query_object_all_params_are_empty_strings(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -152,7 +152,7 @@ def test_query_object_wrong__model_class(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'wrong_param' is invalid value for 'model_class'. "
                                    f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>]."}
 
@@ -170,7 +170,7 @@ def test_query_object_wrong__filter_type(session_maker, model_class, column):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'wrong_param' is invalid value for 'filter_type'. "
                                    f"Valid values: ['column_value', 'search_text']."}
 
@@ -188,7 +188,7 @@ def test_query_object_wrong__comparison(session_maker, model_class, column):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'wrong_param' is invalid value for 'comparison'. "
                                    f"Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."}
 
@@ -208,7 +208,7 @@ def test_query_object_wrong__column(session_maker, model_class, columns):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."}
 
 
@@ -226,8 +226,8 @@ def test_query_object_wrong__column_value(session_maker, model_class, column):
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "OK"
     assert query_result.errors is None
-    assert isinstance(query_result.query_object, sqlalchemy.orm.Query)
-    assert query_result.query_object.all() == []
+    assert isinstance(query_result.result, sqlalchemy.orm.Query)
+    assert query_result.result.all() == []
 
 
 def test_query_object_wrong__model_class__filter_type(session_maker):
@@ -242,7 +242,7 @@ def test_query_object_wrong__model_class__filter_type(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -262,7 +262,7 @@ def test_query_object_wrong__model_class__comparison(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -282,7 +282,7 @@ def test_query_object_wrong__model_class__column(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -305,7 +305,7 @@ def test_query_object_wrong__model_class__column_value(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'wrong_param' is invalid value for 'model_class'. Valid values: "
                                    f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>]."}
 
@@ -323,7 +323,7 @@ def test_query_object_wrong__filter_type__comparison(session_maker, model_class,
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
@@ -345,7 +345,7 @@ def test_query_object_wrong__filter_type__column(session_maker, model_class, col
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -365,7 +365,7 @@ def test_query_object_wrong__filter_type__column_value(session_maker, model_clas
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text']."
     }
@@ -386,7 +386,7 @@ def test_query_object_wrong__comparison__column(session_maker, model_class, colu
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -406,7 +406,7 @@ def test_query_object_wrong__comparison__column_value(session_maker, model_class
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
     }
@@ -427,7 +427,7 @@ def test_query_object_wrong__column__column_value(session_maker, model_class, co
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."}
 
 
@@ -444,7 +444,7 @@ def test_query_object_wrong__model_class__filter_type__comparison(session_maker,
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -465,7 +465,7 @@ def test_query_object_wrong__model_class__filter_type__column(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -490,7 +490,7 @@ def test_query_object_wrong__model_class__filter_type__column_value(session_make
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -511,7 +511,7 @@ def test_query_object_wrong__model_class__comparison__column_value(session_maker
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -531,7 +531,7 @@ def test_query_object_wrong__model_class__column__column_value(session_maker):
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -555,7 +555,7 @@ def test_query_object_wrong__filter_type__comparison__column_value(session_maker
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
@@ -577,7 +577,7 @@ def test_query_object_wrong__filter_type__column__column_value(session_maker, mo
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -599,7 +599,7 @@ def test_query_object_wrong__comparison__column__column_value(session_maker, mod
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -619,7 +619,7 @@ def test_query_object_nondigit_characters_as__id__user_id(session_maker, model_c
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {f"'{column}' must be a digit."}
 
 
@@ -641,7 +641,7 @@ def test_query_object_wrong_data_format_as__creation_date(session_maker, model_c
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"When column='creation_date', 'column_value' must be a date string of the following format: 'YYYY-MM-DD'."
     }
@@ -675,7 +675,7 @@ def test_query_object_wrong_comparison_for_text_fields(session_maker, model_clas
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         f"'{comparison}' is invalid value for 'comparison'. Valid values: ['is', 'is_not']."
     }
@@ -694,7 +694,7 @@ def test_query_object_unexpected_columns_with__search_text__filter_type(session_
         query_result = filter_object._query_object(**data)
     assert isinstance(query_result, QueryResult)
     assert query_result.status == "Failed"
-    assert query_result.query_object is None
+    assert query_result.result is None
     assert query_result.errors == {
         "For filter_type='search_text' the folowing columns are available: "
         "{for <class 'app.models.User'>: [name, email], for <class 'app.models.Advertisement'>: [title, description]}"

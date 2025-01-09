@@ -8,6 +8,7 @@ from typing import Type, Literal, Any
 from sqlalchemy.orm import Query
 
 from app.models import AdvertisementColumns, UserColumns, ModelClass, User, Advertisement, ModelClasses
+from app.service_layer import process_result, ResultStatusIsFailed
 
 
 class InvalidFilterParams(Exception):
@@ -52,12 +53,12 @@ class QueryBase:
 
 @dataclass
 class QueryResult(QueryBase):
-    query_object: sqlalchemy.orm.Query | None = None
+    result: sqlalchemy.orm.Query | None = None
 
 
 @dataclass
 class FilterResult(QueryBase):
-    filtered_data: list[ModelClass] | dict[str, int | list[ModelClass]] | None = None
+    result: list[ModelClass] | dict[str, int | list[ModelClass]] | None = None
 
 
 class Filter:
@@ -156,7 +157,7 @@ class Filter:
             query_object: sqlalchemy.orm.Query = self.session.query(model_class)
             model_attr = getattr(model_class, column, None)
             if filter_type == FilterTypes.SEARCH_TEXT:
-                return QueryResult(query_object=query_object.filter(model_attr.ilike(f'%{column_value}%')))
+                return QueryResult(result=query_object.filter(model_attr.ilike(f'%{column_value}%')))
             comparison_operator = getattr(sqlalchemy.sql.expression.ColumnOperators,
                                           self._comparison.get(comparison)["apply"])
             if column == "creation_date":
@@ -164,8 +165,8 @@ class Filter:
                     comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
                                         datetime.strptime(column_value, "%Y-%m-%d"))
                 )
-                return QueryResult(query_object=filtered_query_object)
-            return QueryResult(query_object=query_object.filter(comparison_operator(model_attr, column_value)))
+                return QueryResult(result=filtered_query_object)
+            return QueryResult(result=query_object.filter(comparison_operator(model_attr, column_value)))
         return QueryResult(status="Failed", errors=list(self.errors))
 
     def get_list(self,
@@ -179,12 +180,21 @@ class Filter:
                                                        comparison=comparison,
                                                        column=column,
                                                        column_value=column_value)
-        if query_result.status == "OK":
-            filter_result: FilterResult = FilterResult(filtered_data=query_result.query_object.all())
-        else:
-            filter_result: FilterResult = FilterResult(status="Failed", errors=query_result.errors)
-            # raise InvalidFilterParams(f"{query_result.errors}")
-        return filter_result
+        # if query_result.status == "OK":
+        #     filter_result: FilterResult = FilterResult(result=query_result.result.all())
+        # else:
+        #     filter_result: FilterResult = FilterResult(status="Failed", errors=query_result.errors)
+        #     # raise InvalidFilterParams(f"{query_result.errors}")
+        # return filter_result
+        try:
+            processed_result = process_result(result=query_result)
+            return processed_result
+        except ResultStatusIsFailed as e:
+            return FilterResult(status="Failed", errors=str(e))
+
+
+
+
 
     def paginate(self,
                  model_class: Type[ModelClass] | None = None,
@@ -201,8 +211,8 @@ class Filter:
                                           column=column,
                                           column_value=column_value)
         if query_result.status == "OK":
-            total: int = query_result.query_object.count()
-            model_instances: list[ModelClass] = query_result.query_object.offset(offset).limit(per_page).all()
+            total: int = query_result.result.count()
+            model_instances: list[ModelClass] = query_result.result.offset(offset).limit(per_page).all()
             paginated_data = {"page": page,
                               "per_page": per_page,
                               "total": total,

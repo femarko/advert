@@ -67,13 +67,13 @@ def test_filter_and_return_list_with_correct_params(
         filter_result = filter_and_return_list(session=sess, **params)
     assert type(filter_result) is FilterResult
     assert filter_result.status == "OK"
-    assert type(filter_result.filtered_data) is list
-    assert len(filter_result.filtered_data) == 2
-    assert isinstance(filter_result.filtered_data[0], params["model_class"]) and \
-           isinstance(filter_result.filtered_data[1], params["model_class"])
-    assert filter_result.filtered_data[0].id == 1000
-    assert filter_result.filtered_data[1].id == 1001
-    assert filter_result.filtered_data[0].creation_date == filter_result.filtered_data[1].creation_date == test_date
+    assert type(filter_result.result) is list
+    assert len(filter_result.result) == 2
+    assert isinstance(filter_result.result[0], params["model_class"]) and \
+           isinstance(filter_result.result[1], params["model_class"])
+    assert filter_result.result[0].id == 1000
+    assert filter_result.result[1].id == 1001
+    assert filter_result.result[0].creation_date == filter_result.result[1].creation_date == test_date
 
 
 def test_filter_and_return_list_all_params_are_wrong(session_maker):
@@ -106,7 +106,7 @@ def test_filter_and_return_list_all_params_are_missing(session_maker):
         filter_result = filter_and_return_list(session=sess, **params)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"Value for 'model_class' is not found.",
                                     f"Value for 'filter_type' is not found.",
                                     f"Value for 'comparison' is not found.",
@@ -124,7 +124,7 @@ def test_filter_and_return_list_all_params_are_empty_strings(session_maker):
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -165,7 +165,7 @@ def test_filter_and_return_list_wrong__filter_type(session_maker, model_class, c
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'filter_type'. "
                                     f"Valid values: ['column_value', 'search_text']."}
 
@@ -182,7 +182,7 @@ def test_filter_and_return_list_wrong__comparison(session_maker, model_class, co
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'comparison'. "
                                     f"Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."}
 
@@ -201,7 +201,7 @@ def test_filter_and_return_list_wrong__column(session_maker, model_class, column
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."}
 
 
@@ -218,7 +218,7 @@ def test_filter_and_return_list_wrong__column_value(session_maker, model_class, 
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "OK"
     assert filter_result.errors is None
-    assert filter_result.filtered_data == []
+    assert filter_result.result == []
 
 
 def test_filter_and_return_list_wrong__model_class__filter_type(session_maker):
@@ -232,7 +232,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type(session_maker):
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -251,7 +251,7 @@ def test_filter_and_return_list_wrong__model_class__comparison(session_maker):
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -270,7 +270,7 @@ def test_filter_and_return_list_wrong__model_class__column(session_maker):
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -292,7 +292,7 @@ def test_filter_and_return_list_wrong__model_class__column_value(session_maker):
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'model_class'. Valid values: "
                                     f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>]."}
 
@@ -309,7 +309,7 @@ def test_filter_and_return_list_wrong__filter_type__comparison(session_maker, mo
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
@@ -330,7 +330,7 @@ def test_filter_and_return_list_wrong__filter_type__column(session_maker, model_
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -349,7 +349,7 @@ def test_filter_and_return_list_wrong__filter_type__column_value(session_maker, 
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text']."
     }
@@ -369,7 +369,7 @@ def test_filter_and_return_list_wrong__comparison__column(session_maker, model_c
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -388,7 +388,7 @@ def test_filter_and_return_list_wrong__comparison__column_value(session_maker, m
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
     }
@@ -408,7 +408,7 @@ def test_filter_and_return_list_wrong__column__column_value(session_maker, model
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."}
 
 
@@ -424,7 +424,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__comparison(sess
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -444,7 +444,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__column(session_
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -468,7 +468,7 @@ def test_filter_and_return_list_wrong__model_class__filter_type__column_value(se
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -488,7 +488,7 @@ def test_filter_and_return_list_wrong__model_class__comparison__column_value(ses
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -507,7 +507,7 @@ def test_filter_and_return_list_wrong__model_class__column__column_value(session
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -530,7 +530,7 @@ def test_filter_and_return_list_wrong__filter_type__comparison__column_value(ses
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
@@ -551,7 +551,7 @@ def test_filter_and_return_list_wrong__filter_type__column__column_value(session
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -572,7 +572,7 @@ def test_filter_and_return_list_wrong__comparison__column__column_value(session_
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -591,7 +591,7 @@ def test_filter_and_return_list_nondigit_characters_as__id__user_id(session_make
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'{column}' must be a digit."}
 
 
@@ -612,7 +612,7 @@ def test_filter_and_return_list_wrong_data_format_as__creation_date(session_make
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"When column='creation_date', 'column_value' must be a date string of the following format: 'YYYY-MM-DD'."
     }
@@ -645,7 +645,7 @@ def test_filter_and_return_list_wrong_comparison_for_text_fields(session_maker, 
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'{comparison}' is invalid value for 'comparison'. Valid values: ['is', 'is_not']."
     }
@@ -663,7 +663,7 @@ def test_filter_and_return_list_unexpected_columns_with__search_text__filter_typ
         filter_result = filter_and_return_list(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         "For filter_type='search_text' the folowing columns are available: "
         "{for <class 'app.models.User'>: [name, email], for <class 'app.models.Advertisement'>: [title, description]}"

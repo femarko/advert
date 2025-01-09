@@ -30,7 +30,7 @@ def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[s
 def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
     filter_result = filter_func(**params)
     if filter_result.status == "OK":
-        return filter_result.filtered_data
+        return filter_result.result
     raise HttpError(status_code=400, description=filter_result.errors)
 
 
@@ -38,13 +38,14 @@ def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
 @jwt_required()
 def get_user_data(user_id: int) -> tuple[Response, int]:
     current_user_id: int = authentication.check_current_user(user_id=user_id)
-    user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
-                                              column="id",
-                                              column_value=current_user_id,
-                                              session=request.session)
-    if user_list:
-        return jsonify(user_list[0].get_user_data()), 200
-    raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
+    # user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
+    #                                           column="id",
+    #                                           column_value=current_user_id,
+    #                                           session=request.session)
+    # if user_list:
+    #     return jsonify(user_list[0].get_user_data()), 200
+    # raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
+    user_list = service_layer.get_users_list(column="id", column_value=current_user_id, uow=UnitOfWork())
 
 
 @adv.route("/users/", methods=["POST"])
@@ -98,8 +99,8 @@ def delete_user(user_id: int):
         column="id", column_value=current_user_id, session=request.session  # type: ignore
     )
     if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            user: User = filter_result.filtered_data[0]
+        if filter_result.result:
+            user: User = filter_result.result[0]
             service_layer.delete_model_instance(model_instance=user)
             return jsonify({"deleted user data": user.get_user_data()}), 200
         raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
@@ -113,8 +114,8 @@ def get_adv_params(adv_id: int):
         column="id", column_value=adv_id, session=request.session  # type: ignore
     )
     if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            adv_instance: Advertisement = filter_result.filtered_data[0]
+        if filter_result.result:
+            adv_instance: Advertisement = filter_result.result[0]
             authentication.check_current_user(user_id=adv_instance.user_id, get_cuid=False)
             return jsonify(adv_instance.get_adv_params()), 200
         raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
@@ -150,12 +151,12 @@ def update_adv(adv_id: int):
         column="id", column_value=adv_id, session=request.session  # type: ignore
     )
     if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            authentication.check_current_user(user_id=filter_result.filtered_data[0].user_id, get_cuid=False)
+        if filter_result.result:
+            authentication.check_current_user(user_id=filter_result.result[0].user_id, get_cuid=False)
             validation_result: ValidationResult = validation.validate_data(validation_model=validation.EditAdv,
                                                                            data=request.json)
             validated_data = validation_result.validated_data
-            updated_adv = service_layer.edit_model_instance(model_instance=filter_result.filtered_data[0],
+            updated_adv = service_layer.edit_model_instance(model_instance=filter_result.result[0],
                                                             new_data=validated_data)
             return jsonify({"modified advertisement params": updated_adv.get_adv_params()}), 200
         raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
@@ -176,7 +177,7 @@ def search_advs_by_text():
                                                                     per_page=per_page,
                                                                     session=request.session)
     if filter_result.status == "OK":
-        return filter_result.filtered_data, 200
+        return filter_result.result, 200
     raise HttpError(status_code=400, description=filter_result.errors)
 
 
@@ -187,8 +188,8 @@ def delete_adv(adv_id: int):
         column="id", column_value=adv_id, session=request.session  # type: ignore
     )
     if filter_result.status == "OK":
-        if filter_result.filtered_data:
-            adv_instance: Advertisement = filter_result.filtered_data[0]
+        if filter_result.result:
+            adv_instance: Advertisement = filter_result.result[0]
             authentication.check_current_user(user_id=adv_instance.user_id, get_cuid=False)
             service_layer.delete_model_instance(model_instance=adv_instance)
             return jsonify({"deleted advertisement params": adv_instance.get_adv_params()}), 200

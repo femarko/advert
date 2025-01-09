@@ -66,17 +66,17 @@ def test_filter_and_return_paginated_data_with_correct_params(
         filter_result = filter_and_return_paginated_data(session=sess, **params)
     assert type(filter_result) is app.repository.filtering.FilterResult
     assert filter_result.status == "OK"
-    assert type(filter_result.filtered_data) is dict
-    assert filter_result.filtered_data["page"] == 1
-    assert filter_result.filtered_data["per_page"] == 10
-    assert filter_result.filtered_data["total"] == 2
-    assert filter_result.filtered_data["total_pages"] == 1
-    assert type(filter_result.filtered_data["items"]) == list
-    assert len(filter_result.filtered_data["items"]) == 2
-    assert isinstance(filter_result.filtered_data["items"][0], params["model_class"])
-    assert isinstance(filter_result.filtered_data["items"][1], params["model_class"])
-    assert filter_result.filtered_data["items"][0].id == 1000
-    assert filter_result.filtered_data["items"][1].id == 1001
+    assert type(filter_result.result) is dict
+    assert filter_result.result["page"] == 1
+    assert filter_result.result["per_page"] == 10
+    assert filter_result.result["total"] == 2
+    assert filter_result.result["total_pages"] == 1
+    assert type(filter_result.result["items"]) == list
+    assert len(filter_result.result["items"]) == 2
+    assert isinstance(filter_result.result["items"][0], params["model_class"])
+    assert isinstance(filter_result.result["items"][1], params["model_class"])
+    assert filter_result.result["items"][0].id == 1000
+    assert filter_result.result["items"][1].id == 1001
 
 
 def test_filter_and_return_paginated_data_all_params_are_wrong(session_maker):
@@ -90,7 +90,7 @@ def test_filter_and_return_paginated_data_all_params_are_wrong(session_maker):
         filter_result = filter_and_return_paginated_data(session=sess, **params)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -111,7 +111,7 @@ def test_filter_and_return_paginated_data_all_params_are_missing(session_maker):
         filter_result = filter_and_return_paginated_data(session=sess, **params)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"Value for 'model_class' is not found.",
                                     f"Value for 'filter_type' is not found.",
                                     f"Value for 'column' is not found.",
@@ -129,7 +129,7 @@ def test_filter_and_return_paginated_data_all_params_are_empty_strings(session_m
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -155,7 +155,7 @@ def test_filter_and_return_paginated_data_wrong__model_class(session_maker):
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'model_class'. "
                                     f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>]."}
 
@@ -172,7 +172,7 @@ def test_filter_and_return_paginated_data_wrong__filter_type(session_maker, mode
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'filter_type'. "
                                     f"Valid values: ['column_value', 'search_text']."}
 
@@ -189,7 +189,7 @@ def test_filter_and_return_paginated_data_wrong__comparison(session_maker, model
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'comparison'. "
                                     f"Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."}
 
@@ -208,7 +208,7 @@ def test_filter_and_return_paginated_data_wrong__column(session_maker, model_cla
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."}
 
 
@@ -225,7 +225,7 @@ def test_filter_and_return_paginated_data_wrong__column_value(session_maker, mod
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "OK"
     assert filter_result.errors is None
-    assert filter_result.filtered_data == {'page': 1, 'per_page': 10, 'total': 0, 'total_pages': 0, 'items': []}
+    assert filter_result.result == {'page': 1, 'per_page': 10, 'total': 0, 'total_pages': 0, 'items': []}
 
 
 def test_filter_and_return_paginated_data_wrong__model_class__filter_type(session_maker):
@@ -239,7 +239,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__filter_type(sessio
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -258,7 +258,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__comparison(session
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -277,7 +277,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__column(session_mak
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -299,7 +299,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__column_value(sessi
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'model_class'. Valid values: "
                                     f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>]."}
 
@@ -316,7 +316,7 @@ def test_filter_and_return_paginated_data_wrong__filter_type__comparison(session
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
@@ -337,7 +337,7 @@ def test_filter_and_return_paginated_data_wrong__filter_type__column(session_mak
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -356,7 +356,7 @@ def test_filter_and_return_paginated_data_wrong__filter_type__column_value(sessi
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text']."
     }
@@ -376,7 +376,7 @@ def test_filter_and_return_paginated_data_wrong__comparison__column(session_make
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -395,7 +395,7 @@ def test_filter_and_return_paginated_data_wrong__comparison__column_value(sessio
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
     }
@@ -415,7 +415,7 @@ def test_filter_and_return_paginated_data_wrong__column__column_value(session_ma
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."}
 
 
@@ -431,7 +431,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__filter_type__compa
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -451,7 +451,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__filter_type__colum
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -475,7 +475,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__filter_type__colum
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -495,7 +495,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__comparison__column
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -514,7 +514,7 @@ def test_filter_and_return_paginated_data_wrong__model_class__column__column_val
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'model_class'. "
         f"Valid values: [<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
@@ -537,7 +537,7 @@ def test_filter_and_return_paginated_data_wrong__filter_type__comparison__column
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<=']."
@@ -558,7 +558,7 @@ def test_filter_and_return_paginated_data_wrong__filter_type__column__column_val
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -579,7 +579,7 @@ def test_filter_and_return_paginated_data_wrong__comparison__column__column_valu
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'wrong_param' is invalid value for 'comparison'. Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
         f"'wrong_param' is invalid value for 'column'. Valid values: {columns}."
@@ -598,7 +598,7 @@ def test_filter_and_return_paginated_data_nondigit_characters_as__id__user_id(se
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {f"'{column}' must be a digit."}
 
 
@@ -619,7 +619,7 @@ def test_filter_and_return_paginated_data_wrong_data_format_as__creation_date(se
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"When column='creation_date', 'column_value' must be a date string of the following format: 'YYYY-MM-DD'."
     }
@@ -652,7 +652,7 @@ def test_filter_and_return_paginated_data_wrong_comparison_for_text_fields(sessi
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         f"'{comparison}' is invalid value for 'comparison'. Valid values: ['is', 'is_not']."
     }
@@ -670,7 +670,7 @@ def test_filter_and_return_paginated_data_unexpected_columns_with__search_text__
         filter_result = filter_and_return_paginated_data(session=sess, **data)
     assert isinstance(filter_result, FilterResult)
     assert filter_result.status == "Failed"
-    assert filter_result.filtered_data is None
+    assert filter_result.result is None
     assert filter_result.errors == {
         "For filter_type='search_text' the folowing columns are available: "
         "{for <class 'app.models.User'>: [name, email], for <class 'app.models.Advertisement'>: [title, description]}"
@@ -690,7 +690,7 @@ def test_filter_and_return_paginated_data_unexpected_columns_with__search_text__
 #                                                                        column_value=creation_date_value)  # type: ignore
 #     assert filter_result.status == "Failed"
 #     assert filter_result.errors == [f"time data '{creation_date_value}' does not match format '%Y-%m-%d'"]
-#     assert filter_result.filtered_data is None
+#     assert filter_result.result is None
 #
 #
 # def test_filter_and_return_paginated_data_with_wrong_comparison_and_column_parameters(
@@ -707,7 +707,7 @@ def test_filter_and_return_paginated_data_unexpected_columns_with__search_text__
 #     assert filter_result.status == "Failed"
 #     assert filter_result.errors == ["Unexpected or missing 'column' parameter.",
 #                                     "Unexpected or missing 'comparison' parameter."]
-#     assert filter_result.filtered_data is None
+#     assert filter_result.result is None
 #
 #
 # def test_filter_and_return_paginated_data_with_wrong_filter_type_parameter(
@@ -723,4 +723,4 @@ def test_filter_and_return_paginated_data_unexpected_columns_with__search_text__
 #                                                                        column_value="1000")  # type: ignore
 #     assert filter_result.status == "Failed"
 #     assert filter_result.errors == ["Unexpected or missing 'filter_type' parameter."]
-#     assert filter_result.filtered_data is None
+#     assert filter_result.result is None

@@ -22,8 +22,8 @@ def test_get_user(session_maker):
     with session() as sess:
         expected = sess\
             .execute(sqlalchemy.text(f'SELECT * FROM "user" WHERE email = :email'), dict(email=email)).first()
-    assert filter_result.filtered_data[0].id == expected[0]
-    assert filter_result.filtered_data[0].name == expected[1]
-    assert filter_result.filtered_data[0].email == expected[2]
-    assert filter_result.filtered_data[0].password == expected[3]
-    assert filter_result.filtered_data[0].creation_date == expected[4]
+    assert filter_result.result[0].id == expected[0]
+    assert filter_result.result[0].name == expected[1]
+    assert filter_result.result[0].email == expected[2]
+    assert filter_result.result[0].password == expected[3]
+    assert filter_result.result[0].creation_date == expected[4]

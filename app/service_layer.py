@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Protocol
 
 from flask import request, Response
 from sqlalchemy.exc import IntegrityError
@@ -34,6 +34,10 @@ class AccessDenied(Exception):
     pass
 
 
+class ResultStatusIsFailed(Exception):
+    pass
+
+
 @adv.before_request
 def before_request() -> None:
     session = models.session_maker()
@@ -46,16 +50,34 @@ def after_request(response: Response) -> Response:
     return response
 
 
+def process_result(result: BaseResult):
+    if result.status == "Failed":
+        raise ResultStatusIsFailed(f"{result.errors}")
+    return result.result
+
+
 def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dict[str, int | list[ModelClass]]:
+    # with uow:
+    #     filter_result = uow.advs.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
+    #                                            column=AdvertisementColumns.USER_ID,
+    #                                            column_value=current_user_id,
+    #                                            comparison=Comparison.IS,
+    #                                            page=page,
+    #                                            per_page=per_page)
+    #     filter_result.result["items"] = [item.get_adv_params() for item in filter_result.result["items"]]
+    # return filter_result.result
     with uow:
-        filter_result = uow.advs.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
-                                               column=AdvertisementColumns.USER_ID,
-                                               column_value=current_user_id,
-                                               comparison=Comparison.IS,
-                                               page=page,
-                                               per_page=per_page)
-        filter_result.filtered_data["items"] = [item.get_adv_params() for item in filter_result.filtered_data["items"]]
-    return filter_result.filtered_data
+        filter_result: Protocol[BaseResult] = uow.advs.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
+                                                                     column=AdvertisementColumns.USER_ID,
+                                                                     column_value=current_user_id,
+                                                                     comparison=Comparison.IS,
+                                                                     page=page,
+                                                                     per_page=per_page)
+        try:
+            processed_result = process_result(result=filter_result)
+        except ResultStatusIsFailed:
+            raise ValidationFailed(f"{processed_result}")
+        return processed_result
 
 
 def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
@@ -65,7 +87,7 @@ def get_users_list(column: UserColumns, column_value: str | int | datetime, uow)
         )
         if results.status == "Failed":
             raise ValidationFailed(f"{results.errors}")
-        return results.filtered_data
+        return results.result
 
 
 def get_user_by_id(user_id: int, uow):
@@ -97,8 +119,8 @@ def search_advs_by_text(column: AdvertisementColumns,
                                                                    page=page,
                                                                    per_page=per_page)
     if filter_result.status == "OK":
-        filter_result.filtered_data["items"] = [
-            {item.title: item.description} for item in filter_result.filtered_data["items"]
+        filter_result.result["items"] = [
+            {item.title: item.description} for item in filter_result.result["items"]
         ]
     return filter_result
 
