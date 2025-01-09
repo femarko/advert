@@ -1,21 +1,17 @@
 from datetime import datetime
-from typing import Any, Callable, Literal, Protocol
+from typing import Any, Callable, Protocol
 
 from flask import request, Response
 from sqlalchemy.exc import IntegrityError
 
 from app import models, adv, validation
 from app.error_handlers import HttpError
-from app.repository.filtering import filter_and_return_list, filter_and_return_paginated_data, FilterResult, \
-    InvalidFilterParams, Params
+from app.repository.filtering import filter_and_return_list, filter_and_return_paginated_data, FilterResult
 
 import logging
 
 from app.models import ModelClass, User, Advertisement
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
-from app.repository.repository import Repository
-from app.unit_of_work import UnitOfWork
-from app.validation import ValidationResult
 from app.base_resut import BaseResult
 
 logging.basicConfig()
@@ -51,7 +47,7 @@ def after_request(response: Response) -> Response:
 
 
 def process_result(result: BaseResult):
-    if result.status == "Failed":
+    if result.errors:
         raise ResultStatusIsFailed(f"{result.errors}")
     return result.result
 

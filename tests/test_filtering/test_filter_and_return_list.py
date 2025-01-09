@@ -2,7 +2,7 @@ import pytest
 
 from app.models import User, Advertisement
 from app.repository.filtering import filter_and_return_list, FilterResult, InvalidFilterParams
-from tests.conftest import session_maker, engine
+from tests.conftest import session_maker, engine, create_test_users_and_advs, test_date
 
 
 @pytest.mark.parametrize(
@@ -68,12 +68,15 @@ def test_filter_and_return_list_with_correct_params(
     assert type(filter_result) is FilterResult
     assert filter_result.status == "OK"
     assert type(filter_result.result) is list
-    assert len(filter_result.result) == 2
-    assert isinstance(filter_result.result[0], params["model_class"]) and \
-           isinstance(filter_result.result[1], params["model_class"])
-    assert filter_result.result[0].id == 1000
-    assert filter_result.result[1].id == 1001
-    assert filter_result.result[0].creation_date == filter_result.result[1].creation_date == test_date
+    assert \
+        set([(isinstance(item, params["model_class"]), item.creation_date) for item in filter_result.result]) \
+        == {(True, test_date)}
+    if params["model_class"] is User:
+        assert len(filter_result.result) == 2
+        assert set([item.id for item in filter_result.result]) == {1000, 1001}
+    else:
+        assert len(filter_result.result) == 4
+        assert set([item.id for item in filter_result.result]) == {1000, 1001, 1003, 1004}
 
 
 def test_filter_and_return_list_all_params_are_wrong(session_maker):

@@ -3,6 +3,7 @@ import pytest
 import app.repository.filtering
 from app.models import User, Advertisement
 from app.repository.filtering import filter_and_return_paginated_data, FilterResult
+from tests.conftest import engine, session_maker, test_date, create_test_users_and_advs
 
 
 @pytest.mark.parametrize(
@@ -69,14 +70,19 @@ def test_filter_and_return_paginated_data_with_correct_params(
     assert type(filter_result.result) is dict
     assert filter_result.result["page"] == 1
     assert filter_result.result["per_page"] == 10
-    assert filter_result.result["total"] == 2
     assert filter_result.result["total_pages"] == 1
     assert type(filter_result.result["items"]) == list
-    assert len(filter_result.result["items"]) == 2
-    assert isinstance(filter_result.result["items"][0], params["model_class"])
-    assert isinstance(filter_result.result["items"][1], params["model_class"])
-    assert filter_result.result["items"][0].id == 1000
-    assert filter_result.result["items"][1].id == 1001
+    assert \
+        set([(isinstance(item, params["model_class"]), item.creation_date) for item in filter_result.result["items"]]) \
+        == {(True, test_date)}
+    if params["model_class"] is User:
+        assert filter_result.result["total"] == 2
+        assert len(filter_result.result["items"]) == 2
+        assert set([item.id for item in filter_result.result["items"]]) == {1000, 1001}
+    else:
+        assert filter_result.result["total"] == 4
+        assert len(filter_result.result["items"]) == 4
+        assert set([item.id for item in filter_result.result["items"]]) == {1000, 1001, 1003, 1004}
 
 
 def test_filter_and_return_paginated_data_all_params_are_wrong(session_maker):
