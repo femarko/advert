@@ -10,6 +10,10 @@ from app.base_resut import BaseResult
 jwt = JWTManager(app=adv)
 
 
+class CurrentUserCheckFailedError(Exception):
+    pass
+
+
 def get_access_token(identity: UserColumns) -> str:
     """
     Creates access token for user authentication, utilizing flask_jwt_extended.create_access_token().
@@ -56,5 +60,4 @@ def check_current_user(user_id: int | None = None, get_cuid: bool = True) -> int
             return current_user_id
         else:
             return
-    raise HttpError(status_code=403, description="Forbidden.")
-# todo: HttpError shouldn't be raised here: to implement BaseRusult or to raise some other (specific) error instead?
+    raise CurrentUserCheckFailedError
