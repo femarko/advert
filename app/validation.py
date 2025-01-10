@@ -33,45 +33,18 @@ class Login(pydantic.BaseModel):
     password: str
 
 
-# class FilterAdvertisement(pydantic.BaseModel):
-#     model_class: Advertisement
-#     filter_type: FilterTypes
-#     comparison: Comparison | None = None
-#     column: AdvertisementColumns
-#     column_value: str | int | datetime
-
-
-# class FilterUser(pydantic.BaseModel):
-#     model_class: Model.USER
-#     filter_type: FilterTypes
-#     comparison: Comparison | None = None
-#     column: UserColumns
-#     column_value: str | int | datetime
-
-
-# class FilterParams(pydantic.BaseModel):
-#     model_class: Model
-#     filter_type: FilterTypes
-#     comparison: Comparison | None = None
-#     column: UserColumns | AdvertisementColumns
-#     column_value: str | int | datetime
-#     page: int | str
-#     per_page: int | str
-
-
 @dataclass
 class ValidationResult:
     result: dict[Any, Any] | None = None
     errors: list[str] | None = None
-    status: Literal["OK", "Failed"] = "OK"
 
 
 def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -> ValidationResult:
     try:
         return ValidationResult(result=validation_model.model_validate(data).model_dump(exclude_unset=True))
-    except pydantic.ValidationError as err:
-        errors_list: list = err.errors()
-        return ValidationResult(status="Failed", errors=errors_list)
+    except pydantic.ValidationError as e:
+        errors_list: list = e.errors()
+        return ValidationResult(errors=errors_list)
 
 
 def validate_login_credentials(**credentials):
