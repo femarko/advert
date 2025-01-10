@@ -1,7 +1,8 @@
 import pytest
 
+import app.repository.filtering
 from app.models import User, Advertisement
-from app.repository.filtering import filter_and_return_list, FilterResult, InvalidFilterParams
+from app.repository.filtering import FilterResult, InvalidFilterParams
 from tests.conftest import session_maker, engine, create_test_users_and_advs, test_date
 
 
@@ -64,7 +65,7 @@ def test_filter_and_return_list_with_correct_params(
 ):
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_list(session=sess, **params)
+        filter_result = app.repository.filtering.filter_and_fetch(session=sess, **params)
     assert type(filter_result) is FilterResult
     assert filter_result.status == "OK"
     assert type(filter_result.result) is list

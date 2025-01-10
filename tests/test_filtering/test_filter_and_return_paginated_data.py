@@ -2,7 +2,7 @@ import pytest
 
 import app.repository.filtering
 from app.models import User, Advertisement
-from app.repository.filtering import filter_and_return_paginated_data, FilterResult
+from app.repository.filtering import FilterResult
 from tests.conftest import engine, session_maker, test_date, create_test_users_and_advs
 
 
@@ -64,7 +64,7 @@ def test_filter_and_return_paginated_data_with_correct_params(
 ):
     session = session_maker
     with session() as sess:
-        filter_result = filter_and_return_paginated_data(session=sess, **params)
+        filter_result = app.repository.filtering.filter_and_fetch(session=sess, paginate=True, **params)
     assert type(filter_result) is app.repository.filtering.FilterResult
     assert filter_result.status == "OK"
     assert type(filter_result.result) is dict
