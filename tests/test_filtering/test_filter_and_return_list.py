@@ -65,7 +65,7 @@ def test_filter_and_return_list_with_correct_params(
 ):
     session = session_maker
     with session() as sess:
-        filter_result = app.repository.filtering.filter_and_fetch(session=sess, **params)
+        filter_result = app.repository.filtering.get_list_or_paginated_data(session=sess, **params)
     assert type(filter_result) is FilterResult
     assert filter_result.status == "OK"
     assert type(filter_result.result) is list

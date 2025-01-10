@@ -64,7 +64,7 @@ def test_filter_and_return_paginated_data_with_correct_params(
 ):
     session = session_maker
     with session() as sess:
-        filter_result = app.repository.filtering.filter_and_fetch(session=sess, paginate=True, **params)
+        filter_result = app.repository.filtering.get_list_or_paginated_data(session=sess, paginate=True, **params)
     assert type(filter_result) is app.repository.filtering.FilterResult
     assert filter_result.status == "OK"
     assert type(filter_result.result) is dict

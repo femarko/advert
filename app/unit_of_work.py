@@ -1,8 +1,6 @@
-from typing import Protocol
-
 import app.repository.repository
 from app.models import session_maker
-from app.repository.repository import Repository, UserRepository, AdvRepository
+from app.repository.repository import RepoProt, UserRepository, AdvRepository
 
 
 class UnitOfWork:
@@ -11,8 +9,8 @@ class UnitOfWork:
 
     def __enter__(self):
         self.session = self.session_maker()
-        self.users = UserRepository(session=self.session)
-        self.advs = AdvRepository(session = self.session)
+        self.users: RepoProt = UserRepository(session=self.session)
+        self.advs: RepoProt = AdvRepository(session = self.session)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

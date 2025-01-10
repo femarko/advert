@@ -191,15 +191,15 @@ class Filter:
             return FilterResult(errors=list(self.errors))
 
 
-def filter_and_fetch(session,
-                     model_class: Type[ModelClass] | None = None,
-                     filter_type: FilterTypes | None = None,
-                     comparison: Comparison | None = None,
-                     column: AdvertisementColumns | UserColumns | None = None,
-                     column_value: str | int | datetime | None = None,
-                     paginate: bool | None = None,
-                     page: int | None = 1,
-                     per_page: int | None = 10):
+def get_list_or_paginated_data(session,
+                               model_class: Type[ModelClass] | None = None,
+                               filter_type: FilterTypes | None = None,
+                               comparison: Comparison | None = None,
+                               column: AdvertisementColumns | UserColumns | None = None,
+                               column_value: str | int | datetime | None = None,
+                               paginate: bool | None = None,
+                               page: int | None = 1,
+                               per_page: int | None = 10) -> FilterResult:
     return Filter(session=session).get_filter_result(
         model_class, filter_type, column, column_value, comparison, paginate, page, per_page
     )

@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, adv, validation
 from app.error_handlers import HttpError
-from app.repository.filtering import filter_and_return_list, filter_and_return_paginated_data, FilterResult
+from app.repository.filtering import FilterResult, get_list_or_paginated_data
 
 import logging
 
@@ -18,19 +18,19 @@ logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
-class NotFound(Exception):
+class NotFoundError(Exception):
     pass
 
 
-class ValidationFailed(Exception):
+class ValidationError(Exception):
     pass
 
 
-class AccessDenied(Exception):
+class AccessDeniedError(Exception):
     pass
 
 
-class ResultStatusIsFailed(Exception):
+class FailedToGetResultError(Exception):
     pass
 
 
@@ -48,7 +48,7 @@ def after_request(response: Response) -> Response:
 
 def process_result(result: BaseResult):
     if result.errors:
-        raise ResultStatusIsFailed(f"{result.errors}")
+        raise FailedToGetResultError(f"{result.errors}")
     return result.result
 
 
@@ -71,19 +71,20 @@ def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dic
                                                                      per_page=per_page)
         try:
             processed_result = process_result(result=filter_result)
-        except ResultStatusIsFailed:
-            raise ValidationFailed(f"{processed_result}")
+        except FailedToGetResultError:
+            raise ValidationError(f"{processed_result}")
         return processed_result
 
 
 def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
-    with uow as uow:
-        results = uow.users.get_list(
-            filter_type=FilterTypes.COLUMN_VALUE, comparison=Comparison.IS, column=column, column_value=column_value
-        )
-        if results.status == "Failed":
-            raise ValidationFailed(f"{results.errors}")
-        return results.result
+    with uow:
+        results = uow.users.get_list_or_paginated_data(filter_func=get_list_or_paginated_data,
+                                                       filter_type=FilterTypes.COLUMN_VALUE,
+                                                       comparison=Comparison.IS,
+                                                       column=column,
+                                                       column_value=column_value)
+        users_list: list[User] = process_result(result=results)
+        return users_list
 
 
 def get_user_by_id(user_id: int, uow):
@@ -146,7 +147,7 @@ def delete_model_instance(model_instance: ModelClass):
 def validate(validation_func: Callable[..., BaseResult], input_data: dict[str, Any]) -> dict[str, Any]:
     validation_result = validation_func(validation_model=validation.Login, data=input_data)
     if validation_result.status == "Failed":
-        raise ValidationFailed(f"{validation_result.errors}")
+        raise ValidationError(f"{validation_result.errors}")
     return validation_result.result
 
 
@@ -157,7 +158,7 @@ def jwt_auth(validate_func: Callable[..., BaseResult],
              uow) -> str:
     validation_result = validate_func(**credentials)
     if validation_result.status == "Failed":
-        raise ValidationFailed(f"{validation_result.errors}")
+        raise ValidationError(f"{validation_result.errors}")
     validated_data = validation_result.result
     try:
         user: User = \
@@ -165,6 +166,6 @@ def jwt_auth(validate_func: Callable[..., BaseResult],
         if check_pass_func(password=validated_data["password"], hashed_password=user.password):
             access_token: str = grant_access_func(identity=user.id)
             return access_token
-        raise AccessDenied(f"Invalid credentials.")
+        raise AccessDeniedError(f"Invalid credentials.")
     except IndexError:
-        raise AccessDenied(f"Invalid credentials.")
+        raise AccessDeniedError(f"Invalid credentials.")

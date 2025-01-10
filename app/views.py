@@ -206,7 +206,7 @@ def login():
                                               credentials=request.json,
                                               uow=UnitOfWork())
         return jsonify({"access_token": access_token}), 200
-    except app.service_layer.AccessDenied as e:
+    except app.service_layer.AccessDeniedError as e:
         raise HttpError(status_code=401, description=str(e))
-    except app.service_layer.ValidationFailed as e:
+    except (app.service_layer.ValidationError, app.service_layer.FailedToGetResultError) as e:
         raise HttpError(status_code=400, description=str(e))
