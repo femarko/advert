@@ -72,6 +72,9 @@ class Filter:
                             ">": {"apply": "__gt__", "explain": "Greater than"},
                             ">=": {"apply": "__ge__", "explain": "Greater than or equal to"}}
         self.errors: set[str] = set()
+        self.query: Query | None = None
+        self.res_list: list | None = None
+        self.paginated: dict | None = None
 
     def _add_error(self,
                    param: Params | None = None,
@@ -149,20 +152,33 @@ class Filter:
                       filter_type: FilterTypes | None = None,
                       column: AdvertisementColumns | UserColumns | None = None,
                       column_value: str | None = None,
-                      comparison: Comparison | None = None) -> sqlalchemy.orm.Query:
-        query_object: sqlalchemy.orm.Query = self.session.query(model_class)
+                      comparison: Comparison | None = None,
+                      paginate: bool | None = None,
+                      page: int | None = 1,
+                      per_page: int | None = 10) -> sqlalchemy.orm.Query:
+        query: sqlalchemy.orm.Query = self.session.query(model_class)
         model_attr = getattr(model_class, column, None)
         if filter_type == FilterTypes.SEARCH_TEXT:
-            return query_object.filter(model_attr.ilike(f'%{column_value}%'))
+            self.query = query.filter(model_attr.ilike(f'%{column_value}%'))
         comparison_operator = getattr(sqlalchemy.sql.expression.ColumnOperators,
                                       self._comparison.get(comparison)["apply"])
         if column == "creation_date":
-            filtered_query_object = query_object.filter(
+            self.query = query.filter(
                 comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
                                     datetime.strptime(column_value, "%Y-%m-%d"))
             )
-            return filtered_query_object
-        return query_object.filter(comparison_operator(model_attr, column_value))
+            # return filtered_query_object
+        if paginate:
+            offset = (page - 1) * per_page
+            total: int = self.query.count()
+            model_instances: list[ModelClass] = self.query.offset(offset).limit(per_page).all()
+            paginated_data = {"page": page,
+                              "per_page": per_page,
+                              "total": total,
+                              "total_pages": (total + per_page - 1) // per_page,
+                              "items": [model_instance for model_instance in model_instances]}
+            return paginated_data
+        return query.filter(comparison_operator(model_attr, column_value))
 
     def get_list(self,
                  model_class: Type[ModelClass] | None = None,
