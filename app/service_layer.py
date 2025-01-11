@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, Optional
 
 from flask import request, Response
 from sqlalchemy.exc import IntegrityError
 
+import app.authentication
 from app import models, adv, validation
 from app.error_handlers import HttpError
 from app.repository.filtering import FilterResult, get_list_or_paginated_data
@@ -31,6 +32,10 @@ class AccessDeniedError(Exception):
 
 
 class FailedToGetResultError(Exception):
+    pass
+
+
+class CurrentUserError:
     pass
 
 
@@ -149,6 +154,14 @@ def validate(validation_func: Callable[..., BaseResult], input_data: dict[str, A
     if validation_result.status == "Failed":
         raise ValidationError(f"{validation_result.errors}")
     return validation_result.result
+
+
+def check_current_user(checking_func: Callable[[Optional[int]], BaseResult], user_id: Optional[int]) -> int:
+    try:
+        current_user_id = process_result(result=checking_func(user_id))
+        return current_user_id
+    except FailedToGetResultError:
+        raise CurrentUserError
 
 
 def jwt_auth(validate_func: Callable[..., BaseResult],
