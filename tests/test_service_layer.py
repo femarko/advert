@@ -4,8 +4,6 @@ import app.authentication
 from app import service_layer
 from app.repository.filtering import FilterResult
 
-# TODO: CurrentUserCheckFailedError is implemented in app.authentication.check_current_user() - refactoring needed.
-
 
 @pytest.mark.run(order=9)
 def test_current_user_is_authorized(access_token):

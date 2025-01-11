@@ -29,10 +29,7 @@ class Repository:
         self.session.add(instance)
 
     def get(self, instance_id):
-        instance = self.session.get(self.model_cl, instance_id)
-        if instance is not None:
-            return instance
-        raise NotFoundError(f"{instance} with id {instance_id} is not found.")
+        return self.session.get(self.model_cl, instance_id)
 
     def get_list_or_paginated_data(self, filter_func: Callable, **kwargs: Any):
         return filter_func(self.session, model_class=self.model_cl, **kwargs)

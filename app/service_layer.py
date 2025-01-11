@@ -57,6 +57,18 @@ def process_result(result: BaseResult):
     return result.result
 
 
+def get_user_data(user_id: int, uow):
+    try:
+        current_user_id: int = check_current_user(checking_func=app.authentication.check_current_user, user_id=user_id)
+    except CurrentUserError:
+        raise AccessDeniedError
+    with uow:
+        user = uow.users.get(current_user_id)
+    if not user:
+        raise NotFoundError
+    return user.get_user_data()
+
+
 def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dict[str, int | list[ModelClass]]:
     # with uow:
     #     filter_result = uow.advs.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
@@ -170,7 +182,7 @@ def jwt_auth(validate_func: Callable[..., BaseResult],
              credentials: dict,
              uow) -> str:
     validation_result = validate_func(**credentials)
-    if validation_result.status == "Failed":
+    if validation_result.errors:
         raise ValidationError(f"{validation_result.errors}")
     validated_data = validation_result.result
     try:

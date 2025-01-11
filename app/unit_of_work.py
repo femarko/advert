@@ -10,7 +10,7 @@ class UnitOfWork:
     def __enter__(self):
         self.session = self.session_maker()
         self.users: RepoProt = UserRepository(session=self.session)
-        self.advs: RepoProt = AdvRepository(session = self.session)
+        self.advs: RepoProt = AdvRepository(session=self.session)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

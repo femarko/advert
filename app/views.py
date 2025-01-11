@@ -37,15 +37,13 @@ def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
 @adv.route("/users/<int:user_id>/", methods=["GET"])
 @jwt_required()
 def get_user_data(user_id: int) -> tuple[Response, int]:
-    current_user_id: int = authentication.check_current_user(user_id=user_id)
-    # user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
-    #                                           column="id",
-    #                                           column_value=current_user_id,
-    #                                           session=request.session)
-    # if user_list:
-    #     return jsonify(user_list[0].get_user_data()), 200
-    # raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
-    user_list = service_layer.get_users_list(column="id", column_value=current_user_id, uow=UnitOfWork())
+    try:
+        user_data: dict = service_layer.get_user_data(user_id=user_id, uow=UnitOfWork())
+        return jsonify(user_data), 200
+    except service_layer.AccessDeniedError:
+        raise HttpError(status_code=403, description="Forbidden.")
+    except service_layer.NotFoundError:
+        raise HttpError(status_code=404, description=f"User with id={user_id} is not found.")
 
 
 @adv.route("/users/", methods=["POST"])
