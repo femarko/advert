@@ -1,4 +1,7 @@
+from sqlalchemy.exc import IntegrityError
+
 import app.repository.repository
+import app.errors
 from app.models import session_maker
 from app.repository.repository import RepoProto, UserRepository, AdvRepository
 
@@ -23,4 +26,7 @@ class UnitOfWork:
         self.session.rollback()
 
     def commit(self):
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError:
+            raise app.errors.AlreadyExistsError

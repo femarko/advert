@@ -3,6 +3,7 @@ from typing import Callable, Any, Protocol
 
 from sqlalchemy.exc import IntegrityError
 
+import app.errors
 import app.service_layer
 from app.models import User, Advertisement, ModelClass
 
@@ -37,7 +38,7 @@ class Repository:
             self.session.add(instance)
             return instance
         except IntegrityError:
-            raise app.service_layer.AlreadyExistsError
+            raise app.errors.AlreadyExistsError
 
     def get(self, instance_id):
         return self.session.get(self.model_cl, instance_id)

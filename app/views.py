@@ -3,6 +3,7 @@ from typing import Callable, Any, Type
 from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required
 
+import app.errors
 import app.repository.filtering
 from app import adv, models, pass_hashing, validation, service_layer, authentication
 from app.error_handlers import HttpError
@@ -40,9 +41,9 @@ def get_user_data(user_id: int) -> tuple[Response, int]:
     try:
         user_data: dict = service_layer.get_user_data(user_id=user_id, uow=UnitOfWork())
         return jsonify(user_data), 200
-    except service_layer.AccessDeniedError:
+    except app.errors.AccessDeniedError:
         raise HttpError(status_code=403, description="Forbidden.")
-    except service_layer.NotFoundError:
+    except app.errors.NotFoundError:
         raise HttpError(status_code=404, description=f"User with id={user_id} is not found.")
 
 
@@ -51,9 +52,9 @@ def create_user():
     try:
         new_user_id: int = service_layer.create_user(user_data=request.json, uow=UnitOfWork())
         return jsonify({"user id": new_user_id}), 201
-    except service_layer.ValidationError as e:
+    except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-    except service_layer.AlreadyExistsError as e:
+    except app.errors.AlreadyExistsError as e:
         raise HttpError(status_code=409, description=str(e))
 
 
@@ -204,7 +205,7 @@ def login():
                                               credentials=request.json,
                                               uow=UnitOfWork())
         return jsonify({"access_token": access_token}), 200
-    except app.service_layer.AccessDeniedError as e:
+    except app.errors.AccessDeniedError as e:
         raise HttpError(status_code=401, description=str(e))
-    except (app.service_layer.ValidationError, app.service_layer.FailedToGetResultError) as e:
+    except (app.errors.ValidationError, app.errors.FailedToGetResultError) as e:
         raise HttpError(status_code=400, description=str(e))

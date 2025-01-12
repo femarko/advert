@@ -7,6 +7,8 @@ from sqlalchemy.exc import IntegrityError
 import app.authentication
 from app import models, adv, validation, pass_hashing
 from app.error_handlers import HttpError
+from app.errors import NotFoundError, ValidationError, AccessDeniedError, FailedToGetResultError, CurrentUserError, \
+    AlreadyExistsError
 from app.repository.filtering import FilterResult, get_list_or_paginated_data
 
 import logging
@@ -14,34 +16,9 @@ import logging
 from app.models import ModelClass, User, Advertisement
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
 from app.base_resut import BaseResult
-from app.validation import ValidationResult
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-
-
-class NotFoundError(Exception):
-    pass
-
-
-class ValidationError(Exception):
-    pass
-
-
-class AccessDeniedError(Exception):
-    pass
-
-
-class FailedToGetResultError(Exception):
-    pass
-
-
-class CurrentUserError:
-    pass
-
-
-class AlreadyExistsError(Exception):
-    pass
 
 
 @adv.before_request

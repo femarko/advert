@@ -13,25 +13,26 @@ def register_urls():
 
 
 @pytest.mark.run(order=1)
-@pytest.mark.parametrize(
-    "user_data,user_id",
-    (
-            ({"name": "test_name_1", "email": "test_1@email.com", "password": "test_password_1"}, 1),
-            ({"name": "test_name_2", "email": "test_2@email.com", "password": "test_password_2"}, 2)
-    )
-)
-def test_create_user(test_client, session_maker, engine, user_data, user_id, drop_all_create_all):
+def test_create_user(test_client, session_maker, engine, drop_all_create_all):
+    user_data = {"name": "test_name", "email": "test@email.com", "password": "test_password"}
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     session = session_maker
     with session() as sess:
-        sql_statement = sqlalchemy.text('SELECT * from "user" WHERE id = :id')
-        data_from_db = sess.execute(sql_statement, dict(id=user_id)).first()
+        data_from_db = sess.execute(sqlalchemy.text('SELECT * from "user"')).first()
+        sess.execute(sqlalchemy.text('DELETE from "user"'))
+        sess.commit()
     assert response.status_code == 201
-    assert response.json == {"user id": user_id}
-    assert response.json["user id"] == data_from_db[0]
+    assert response.json == {"user id": data_from_db[0]}
     assert data_from_db[1] == user_data["name"]
     assert data_from_db[2] == user_data["email"]
     assert pass_hashing.check_password(hashed_password=data_from_db[3], password=user_data["password"])
+
+
+def test_create_user_with_integrity_error(test_client, session_maker, engine, create_test_users_and_advs):
+    user_data = {"name": f"test_filter_1000", "email": f"test_filter_1000@email.com", "password": "password"}
+    response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
+    assert response.status_code == 409
+    assert response.json == {"errors": "A user with the provided credentials already existsts."}
 
 
 @pytest.mark.run(order=2)
