@@ -1,12 +1,19 @@
+from dataclasses import dataclass
 from typing import Callable, Any, Protocol
-from app.models import User, Advertisement
+
+from sqlalchemy.exc import IntegrityError
+
+import app.service_layer
+from app.models import User, Advertisement, ModelClass
 
 
 class NotFoundError(Exception):
     pass
 
 
-class RepoProt(Protocol):
+
+
+class RepoProto(Protocol):
     def add(self, instance) -> None:
         pass
 
@@ -25,8 +32,12 @@ class Repository:
         self.session = session
         self.model_cl = None
 
-    def add(self, instance):
-        self.session.add(instance)
+    def add(self, instance) -> ModelClass:
+        try:
+            self.session.add(instance)
+            return instance
+        except IntegrityError:
+            raise app.service_layer.AlreadyExistsError
 
     def get(self, instance_id):
         return self.session.get(self.model_cl, instance_id)

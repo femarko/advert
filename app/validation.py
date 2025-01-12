@@ -50,3 +50,7 @@ def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -
 def validate_login_credentials(**credentials):
     return validate_data(validation_model=Login, data={**credentials})
 
+
+def validate_user_data(**user_data):
+    return validate_data(validation_model=CreateUser, data={**user_data})
+

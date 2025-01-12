@@ -48,13 +48,13 @@ def get_user_data(user_id: int) -> tuple[Response, int]:
 
 @adv.route("/users/", methods=["POST"])
 def create_user():
-    validated_data = get_validation_result(validation_func=validation.validate_data,
-                                           validation_model=validation.CreateUser,
-                                           data=request.json)
-    validated_data["password"] = pass_hashing.hash_password(password=validated_data["password"])
-    new_user: models.User = service_layer.add_model_instance(model_instance=models.User(**validated_data))
-    new_user_id: int = new_user.id
-    return jsonify({"user id": new_user_id}), 201
+    try:
+        new_user_id: int = service_layer.create_user(user_data=request.json, uow=UnitOfWork())
+        return jsonify({"user id": new_user_id}), 201
+    except service_layer.ValidationError as e:
+        raise HttpError(status_code=400, description=str(e))
+    except service_layer.AlreadyExistsError as e:
+        raise HttpError(status_code=409, description=str(e))
 
 
 @adv.route("/users/<int:user_id>/", methods=["PATCH"])
