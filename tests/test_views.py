@@ -13,7 +13,7 @@ def register_urls():
 
 
 @pytest.mark.run(order=1)
-def test_create_user(test_client, session_maker, engine, drop_all_create_all):
+def test_create_user(test_client, session_maker, engine):
     user_data = {"name": "test_name", "email": "test@email.com", "password": "test_password"}
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     session = session_maker
@@ -33,6 +33,25 @@ def test_create_user_with_integrity_error(test_client, session_maker, engine, cr
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     assert response.status_code == 409
     assert response.json == {"errors": "A user with the provided credentials already existsts."}
+
+
+@pytest.mark.parametrize(
+    "user_data,missed_param", (
+            ({"name": f"test_name", "password": "test_password"}, "email"),
+            ({"email": "email@test.test", "name": f"test_name"}, "password"),
+            ({"email": "email@test.test", "password": "test_password"}, "name"),
+    )
+)
+def test_create_user_where_name_or_email_or_password_missed(
+        test_client, session_maker, engine, user_data, missed_param
+):
+    response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
+    assert response.status_code == 400
+    assert response.json == {'errors': f"[{{'type': 'missing', 'loc': ('{missed_param}',), 'msg': 'Field required', "
+                                       f"'input': {str(user_data)}, "
+                                       f"'url': 'https://errors.pydantic.dev/2.9/v/missing'}}]"}
+
+
 
 
 @pytest.mark.run(order=2)

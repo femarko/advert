@@ -52,20 +52,14 @@ def get_user_data(user_id: int, uow):
 
 
 def create_user(user_data: dict[str, str], uow):
-    try:
-        validated_data = process_result(result=validation.validate_user_data(**user_data))
-        validated_data["password"] = pass_hashing.hash_password(password=validated_data["password"])
-        user_instance = User(**validated_data)
-        with uow as u:
-            created_user: User = uow.users.add(user_instance)
-            uow.commit()
-            created_user_data: int = created_user.get_user_data()["id"]
-            return created_user_data
-    except FailedToGetResultError as e:
-        raise ValidationError(e)
-    except AlreadyExistsError:
-        raise AlreadyExistsError(f"A user with the provided credentials already existsts.")
-
+    validated_data = validation.validate_data_for_user_creation(**user_data)
+    validated_data["password"] = pass_hashing.hash_password(password=validated_data["password"])
+    user_instance = User(**validated_data)
+    with uow:
+        created_user: User = uow.users.add(user_instance)
+        uow.commit()
+        created_user_id: int = created_user.get_user_data()["id"]
+        return created_user_id
 
 
 def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dict[str, int | list[ModelClass]]:

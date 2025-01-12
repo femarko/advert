@@ -2,6 +2,8 @@ import pydantic
 from typing import TypeVar, Type, Any, Literal
 from dataclasses import dataclass
 
+import app.errors
+
 PydanticModel = TypeVar("PydanticModel", bound=pydantic.BaseModel)
 
 
@@ -11,7 +13,7 @@ class CreateUser(pydantic.BaseModel):
     password: str
 
 
-class EditUser(pydantic.BaseModel):
+class UpdateUser(pydantic.BaseModel):
     name: str | None = None
     email: str | None = None
     password: str | None = None
@@ -41,16 +43,20 @@ class ValidationResult:
 
 def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]) -> ValidationResult:
     try:
-        return ValidationResult(result=validation_model.model_validate(data).model_dump(exclude_unset=True))
+        return validation_model.model_validate(data).model_dump(exclude_unset=True)
     except pydantic.ValidationError as e:
-        errors_list: list = e.errors()
-        return ValidationResult(errors=errors_list)
+        raise app.errors.ValidationError(e.errors())
 
 
 def validate_login_credentials(**credentials):
     return validate_data(validation_model=Login, data={**credentials})
 
 
-def validate_user_data(**user_data):
+def validate_data_for_user_creation(**user_data):
     return validate_data(validation_model=CreateUser, data={**user_data})
+
+
+def validate_data_for_user_updating(**user_data):
+    return validate_data(validation_model=UpdateUser, data={**user_data})
+
 

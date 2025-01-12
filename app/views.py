@@ -54,8 +54,8 @@ def create_user():
         return jsonify({"user id": new_user_id}), 201
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-    except app.errors.AlreadyExistsError as e:
-        raise HttpError(status_code=409, description=str(e))
+    except app.errors.AlreadyExistsError:
+        raise HttpError(status_code=409, description="A user with the provided credentials already existsts.")
 
 
 @adv.route("/users/<int:user_id>/", methods=["PATCH"])
@@ -63,7 +63,7 @@ def create_user():
 def update_user(user_id: int):
     current_user_id: int = authentication.check_current_user(user_id=user_id)
     validated_data = get_validation_result(validation_func=validation.validate_data,
-                                           validation_model=validation.EditUser,
+                                           validation_model=validation.UpdateUser,
                                            data=request.json)
     user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
                                               column="id",
