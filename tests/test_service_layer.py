@@ -2,11 +2,11 @@ import datetime
 
 import sqlalchemy, pytest
 
+import app.errors
 from app import pass_hashing, authentication, unit_of_work, validation, models
 import app.authentication
 from app import service_layer
 from app.repository.filtering import FilterResult
-# from tests import fakes
 
 
 @pytest.mark.run(order=9)
@@ -61,3 +61,31 @@ def test_update_user(
     )
     assert result == expected_result
     assert uow.users.users.pop().password == expected_password
+
+
+def test_update_user_raises_not_found_error(
+        fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo,
+        fake_unit_of_work
+):
+    new_data = {"name": "new_name", "email": "new_email", "password": "new_pass"}
+    authenticated_user_id = 2
+    creation_date = datetime.datetime.today()
+    user = models.User(
+        id=1,
+        name="test_name",
+        email="test_email",
+        password="test_pass",
+        creation_date=creation_date,
+        advertisements=[]
+    )
+    uow = fake_unit_of_work(users=fake_users_repo([user]), advs=fake_advs_repo([]))
+    with pytest.raises(app.errors.NotFoundError) as e:
+        service_layer.update_user(
+            authenticated_user_id=authenticated_user_id,
+            check_current_user_func=fake_check_current_user_func,
+            validate_func=fake_validate_func,
+            hash_pass_func=fake_hash_pass_func,
+            new_data=new_data,
+            uow=uow
+        )
+    assert e.type == app.errors.NotFoundError

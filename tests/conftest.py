@@ -3,7 +3,7 @@ import datetime
 import pytest
 import sqlalchemy
 
-import app.pass_hashing
+import app.pass_hashing, app.errors
 from app import adv, models
 
 
@@ -159,7 +159,9 @@ class FakeUsersRepo:
         self.users.add(user)
 
     def get(self, user_id):
-        return next(user for user in self.users if user.id == user_id)
+        if user_id not in (user.id for user in self.users):
+            return []
+        return next(user for user in self.users if user == user_id)
 
 
 class FakeAdvsRepo:
@@ -170,6 +172,8 @@ class FakeAdvsRepo:
         self.advs.add(adv)
 
     def get(self, adv_id):
+        if adv_id not in (adv.id for adv in self.advs):
+            return []
         return next(adv for adv in self.advs if adv.id == adv_id)
 
 

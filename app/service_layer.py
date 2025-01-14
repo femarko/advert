@@ -74,6 +74,8 @@ def update_user(authenticated_user_id: int,
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
         fetched_user: User = uow.users.get(authenticated_user_id)
+        if not fetched_user:
+            raise app.errors.NotFoundError
         for attr_name, attr_value in validated_data.items():
             setattr(fetched_user, attr_name, attr_value)
         uow.users.add(fetched_user)
