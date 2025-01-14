@@ -73,12 +73,12 @@ def update_user(authenticated_user_id: int,
     if validated_data["password"]:
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
-        user_to_update: User = uow.users.get(authenticated_user_id)
+        fetched_user: User = uow.users.get(authenticated_user_id)
         for attr_name, attr_value in validated_data.items():
-            setattr(user_to_update, attr_name, attr_value)
-        uow.users.add(user_to_update)
+            setattr(fetched_user, attr_name, attr_value)
+        uow.users.add(fetched_user)
         uow.commit()
-        return user_to_update.get_user_data()
+        return fetched_user.get_user_data()
 
 
 def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dict[str, int | list[ModelClass]]:

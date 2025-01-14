@@ -113,3 +113,81 @@ def create_test_users_and_advs(session_maker, test_date):
         sess.execute(sqlalchemy.text('DELETE FROM "user" WHERE (creation_date = :creation_date)'),
                      dict(creation_date=test_date))
         sess.commit()
+
+
+@pytest.fixture
+def fake_check_current_user_func():
+    def foo(user_id: int, get_cuid: bool = True):
+        return user_id
+    return foo
+
+
+@pytest.fixture
+def fake_validate_func():
+    def foo(**data):
+        return data
+    return foo
+
+
+@pytest.fixture
+def fake_hash_pass_func():
+    def foo(password: str):
+        return password
+    return foo
+
+
+@pytest.fixture
+def fake_users_repo():
+    return FakeUsersRepo
+
+
+@pytest.fixture
+def fake_advs_repo():
+    return FakeAdvsRepo
+
+
+@pytest.fixture
+def fake_unit_of_work():
+    return FakeUnitOfWork
+
+
+class FakeUsersRepo:
+    def __init__(self, users: list):
+        self.users: set = set(users)
+
+    def add(self, user):
+        self.users.add(user)
+
+    def get(self, user_id):
+        return next(user for user in self.users if user.id == user_id)
+
+
+class FakeAdvsRepo:
+    def __init__(self, advs: list):
+        self.advs: set = set(advs)
+
+    def add(self, adv):
+        self.advs.add(adv)
+
+    def get(self, adv_id):
+        return next(adv for adv in self.advs if adv.id == adv_id)
+
+
+class FakeUnitOfWork:
+    def __init__(self, users, advs):
+        self.commited = False
+        self.users = users
+        self.advs = advs
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.rollback()
+
+    def rollback(self):
+        pass
+
+    def commit(self):
+        self.commited = True

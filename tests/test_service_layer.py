@@ -1,10 +1,12 @@
+import datetime
+
 import sqlalchemy, pytest
 
-from app import pass_hashing, authentication, unit_of_work, validation
+from app import pass_hashing, authentication, unit_of_work, validation, models
 import app.authentication
 from app import service_layer
 from app.repository.filtering import FilterResult
-from tests.fakes import fake_check_current_user_func
+# from tests import fakes
 
 
 @pytest.mark.run(order=9)
@@ -22,7 +24,7 @@ def test_get_user(session_maker):
             column="email", column_value=email, session=sess  # type: ignore
         )
     with session() as sess:
-        expected = sess\
+        expected = sess \
             .execute(sqlalchemy.text(f'SELECT * FROM "user" WHERE email = :email'), dict(email=email)).first()
     assert filter_result.result[0].id == expected[0]
     assert filter_result.result[0].name == expected[1]
@@ -31,27 +33,31 @@ def test_get_user(session_maker):
     assert filter_result.result[0].creation_date == expected[4]
 
 
-def test_update_user(create_test_users_and_advs, session_maker):
+def test_update_user(
+        fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo,
+        fake_unit_of_work
+):
     new_data = {"name": "new_name", "email": "new_email", "password": "new_pass"}
-    authenticated_user_id = 1000
-    check_current_user_func = fake_check_current_user_func
-    validate_func = validation.validate_data_for_user_updating
-    hash_pass_func = pass_hashing.hash_password
-    uow = unit_of_work.UnitOfWork()
-    expected = {"id": 1000,
-                "name": "new_name",
-                "email": "new_email"}
-    result = service_layer.update_user(authenticated_user_id=authenticated_user_id,
-                                       check_current_user_func=check_current_user_func,
-                                       validate_func=validate_func,
-                                       hash_pass_func=hash_pass_func,
-                                       new_data=new_data,
-                                       uow=uow)
-    session = session_maker()
-    with session as sess:
-        data_from_db = \
-            sess.execute(sqlalchemy.text('SELECT * from "user" WHERE id = :id'), dict(id=authenticated_user_id)).first()
-    assert result["id"] == expected["id"] == data_from_db[0]
-    assert result["name"] == expected["name"] == data_from_db[1]
-    assert result["email"] == expected["email"] == data_from_db[2]
-    assert pass_hashing.check_password(hashed_password=data_from_db[3], password=new_data["password"])
+    authenticated_user_id = 1
+    creation_date = datetime.datetime.today()
+    user = models.User(
+        id=1,
+        name="test_name",
+        email="test_email",
+        password="test_pass",
+        creation_date=creation_date,
+        advertisements=[]
+    )
+    uow = fake_unit_of_work(users=fake_users_repo([user]), advs=fake_advs_repo([]))
+    expected_result = {"id": 1, "creation_date": creation_date.isoformat(), **new_data}
+    expected_password = expected_result.pop("password")
+    result = service_layer.update_user(
+        authenticated_user_id=authenticated_user_id,
+        check_current_user_func=fake_check_current_user_func,
+        validate_func=fake_validate_func,
+        hash_pass_func=fake_hash_pass_func,
+        new_data=new_data,
+        uow=uow
+    )
+    assert result == expected_result
+    assert uow.users.users.pop().password == expected_password
