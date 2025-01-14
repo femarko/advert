@@ -61,18 +61,35 @@ def create_user():
 @adv.route("/users/<int:user_id>/", methods=["PATCH"])
 @jwt_required()
 def update_user(user_id: int):
-    current_user_id: int = authentication.check_current_user(user_id=user_id)
-    validated_data = get_validation_result(validation_func=validation.validate_data,
-                                           validation_model=validation.UpdateUser,
-                                           data=request.json)
-    user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
-                                              column="id",
-                                              column_value=current_user_id,
-                                              session=request.session)
-    if user_list:
-        updated_user = service_layer.edit_model_instance(model_instance=user_list[0], new_data=validated_data)
-        return jsonify({"modified user data": updated_user.get_user_data()}), 200
-    raise HttpError(status_code=404, description=f"User with {validated_data['id']=} is not found.")
+    try:
+        updated_user_data: dict = service_layer.update_user(
+            authenticated_user_id=user_id,
+            check_current_user_func=authentication.check_current_user,
+            validate_func=validation.validate_data_for_user_updating,
+            hash_pass_func=pass_hashing.hash_password,
+            new_data=request.json,
+            uow=UnitOfWork()
+        )
+        return jsonify({"modified_data": updated_user_data}), 200
+    except app.errors.CurrentUserError:
+        raise HttpError(status_code=403, description="Forbidden action.")
+    except app.errors.ValidationError as e:
+        raise HttpError(status_code=400, description=str(e))
+    except app.errors.NotFoundError:
+        raise HttpError(status_code=404, description=f"User is not found.")
+    #
+    # current_user_id: int = authentication.check_current_user(user_id=user_id)
+    # validated_data = get_validation_result(validation_func=validation.validate_data,
+    #                                        validation_model=validation.UpdateUser,
+    #                                        data=request.json)
+    # user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
+    #                                           column="id",
+    #                                           column_value=current_user_id,
+    #                                           session=request.session)
+    # if user_list:
+    #     updated_user = service_layer.edit_model_instance(model_instance=user_list[0], new_data=validated_data)
+    #     return jsonify({"modified user data": updated_user.get_user_data()}), 200
+    # raise HttpError(status_code=404, description=f"User with {validated_data['id']=} is not found.")
 
 
 @adv.route("/users/<int:user_id>/advertisements", methods=["GET"])
