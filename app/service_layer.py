@@ -49,12 +49,12 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
 def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
     validated_data = validate_func(**user_data)
     validated_data["password"] = hash_pass_func(password=validated_data["password"])
-    user_instance = User(**validated_data)
+    user = User(**validated_data)
     with uow:
-        created_user: User = uow.users.add(user_instance)
+        uow.users.add(user)
         uow.commit()
-        created_user_id: int = created_user.get_user_data()["id"]
-        return created_user_id
+        user_id: int = user.get_user_data()["id"]
+        return user_id
 
 
 def update_user(authenticated_user_id: int,

@@ -36,7 +36,6 @@ class Repository:
     def add(self, instance) -> ModelClass:
         try:
             self.session.add(instance)
-            return instance
         except IntegrityError:
             raise app.errors.AlreadyExistsError
 
