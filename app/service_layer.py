@@ -190,21 +190,18 @@ def check_current_user(checking_func: Callable[[Optional[int]], BaseResult], use
         raise CurrentUserError
 
 
-def jwt_auth(validate_func: Callable[..., BaseResult],
+def jwt_auth(validate_func: Callable,
              check_pass_func: Callable[..., bool],
              grant_access_func: Callable,
              credentials: dict,
              uow) -> str:
-    validation_result = validate_func(**credentials)
-    if validation_result.errors:
-        raise ValidationError(f"{validation_result.errors}")
-    validated_data = validation_result.result
     try:
+        validated_data = validate_func(**credentials)
         user: User = \
             get_users_list(column=UserColumns.EMAIL, column_value=validated_data[UserColumns.EMAIL], uow=uow)[0]
         if check_pass_func(password=validated_data["password"], hashed_password=user.password):
             access_token: str = grant_access_func(identity=user.id)
             return access_token
-        raise AccessDeniedError(f"Invalid credentials.")
+        raise app.errors.AccessDeniedError(f"Invalid credentials.")
     except IndexError:
-        raise AccessDeniedError(f"Invalid credentials.")
+        raise app.errors.AccessDeniedError(f"Invalid credentials.")

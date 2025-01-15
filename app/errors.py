@@ -14,7 +14,7 @@ class FailedToGetResultError(Exception):
     pass
 
 
-class CurrentUserError:
+class CurrentUserError(Exception):
     pass
 
 

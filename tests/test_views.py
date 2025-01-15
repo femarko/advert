@@ -341,10 +341,10 @@ def test_delete_adv(test_client, session_maker, access_token):
 
 
 @pytest.mark.run(order=25)
-def test_login_with_correct_credentials(test_client, app_context):
+def test_login_with_correct_credentials(test_client, app_context, create_test_users_and_advs):
     with app_context:
         response = test_client.post("http://127.0.0.1:5000/login/",
-                                    json={"email": "test_2@email.com", "password": "test_password_2"})
+                                    json={"email": "test_filter_1000@email.com", "password": "test_filter_1000_pass"})
     assert response.status_code == 200
     assert response.json["access_token"]
     assert type(response.json["access_token"]) == str
