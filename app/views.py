@@ -39,12 +39,14 @@ def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
 @jwt_required()
 def get_user_data(user_id: int) -> tuple[Response, int]:
     try:
-        user_data: dict = service_layer.get_user_data(user_id=user_id, uow=UnitOfWork())
+        user_data: dict = service_layer.get_user_data(
+            user_id=user_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
+        )
         return jsonify(user_data), 200
-    except app.errors.AccessDeniedError:
-        raise HttpError(status_code=403, description="Forbidden.")
+    except app.errors.CurrentUserError:
+        raise HttpError(status_code=403, description="Unavailable operation.")
     except app.errors.NotFoundError:
-        raise HttpError(status_code=404, description=f"User with id={user_id} is not found.")
+        raise HttpError(status_code=404, description=f"User is not found.")
 
 
 @adv.route("/users/", methods=["POST"])

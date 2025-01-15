@@ -82,13 +82,22 @@ def test_create_adv(test_client, session_maker, engine, adv_params, user, adv_id
 
 @pytest.mark.run(order=12)
 def test_get_user_data(test_client, access_token, test_date):
-    response = test_client.get("http://127.0.0.1:5000/users/1000/",
-                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+    response = test_client.get(
+        "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token['user_1000']}"}
+    )
     assert response.status_code == 200
     assert response.json == {"id": 1000,
                              "name": f"test_filter_1000",
                              "email": "test_filter_1000@email.com",
                              "creation_date": test_date.isoformat()}
+
+
+def test_get_user_data_by_other_user(test_client, access_token, test_date):
+    response = test_client.get(
+        "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token['user_1001']}"}
+    )
+    assert response.status_code == 403
+    assert response.json == {"errors": "Unavailable operation."}
 
 
 @pytest.mark.run(order=13)

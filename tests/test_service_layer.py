@@ -33,6 +33,18 @@ def test_get_user(session_maker):
     assert filter_result.result[0].creation_date == expected[4]
 
 
+def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo, test_user):
+    fuow = fake_unit_of_work(users=fake_users_repo([test_user]), advs=[])
+    result = service_layer.get_user_data(user_id=1, check_current_user_func=fake_check_current_user_func, uow=fuow)
+    expected_result = {
+        "id": test_user.id,
+        "name": test_user.name,
+        "email": test_user.email,
+        "creation_date": test_user.creation_date.isoformat()
+    }
+    assert result == expected_result
+
+
 def test_update_user(
         fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo,
         fake_unit_of_work

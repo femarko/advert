@@ -195,3 +195,16 @@ class FakeUnitOfWork:
 
     def commit(self):
         self.commited = True
+
+
+@pytest.fixture
+def test_user(test_date):
+    user = models.User(
+        id=1,
+        name="test_name",
+        email="test_email",
+        password="test_pass",
+        creation_date=test_date,
+        advertisements=[]
+    )
+    return user

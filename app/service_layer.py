@@ -39,15 +39,10 @@ def process_result(result: BaseResult):
     return result.result
 
 
-def get_user_data(user_id: int, uow):
-    try:
-        current_user_id: int = check_current_user(checking_func=app.authentication.check_current_user, user_id=user_id)
-    except CurrentUserError:
-        raise AccessDeniedError
+def get_user_data(user_id: int, check_current_user_func: Callable, uow):
+    current_user_id: int = check_current_user_func(user_id=user_id, get_cuid=True)
     with uow:
         user = uow.users.get(current_user_id)
-    if not user:
-        raise NotFoundError
     return user.get_user_data()
 
 
