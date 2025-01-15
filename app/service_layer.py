@@ -46,9 +46,9 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     return user.get_user_data()
 
 
-def create_user(user_data: dict[str, str], uow):
-    validated_data = validation.validate_data_for_user_creation(**user_data)
-    validated_data["password"] = pass_hashing.hash_password(password=validated_data["password"])
+def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
+    validated_data = validate_func(**user_data)
+    validated_data["password"] = hash_pass_func(password=validated_data["password"])
     user_instance = User(**validated_data)
     with uow:
         created_user: User = uow.users.add(user_instance)

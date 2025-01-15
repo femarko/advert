@@ -52,7 +52,11 @@ def get_user_data(user_id: int) -> tuple[Response, int]:
 @adv.route("/users/", methods=["POST"])
 def create_user():
     try:
-        new_user_id: int = service_layer.create_user(user_data=request.json, uow=UnitOfWork())
+        new_user_id: int = service_layer.create_user(
+            user_data=request.json,
+            validate_func=validation.validate_data_for_user_creation,
+            hash_pass_func=pass_hashing.hash_password,
+            uow=UnitOfWork())
         return jsonify({"user id": new_user_id}), 201
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
