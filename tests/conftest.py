@@ -161,7 +161,7 @@ class FakeUsersRepo:
     def get(self, user_id):
         if user_id not in (user.id for user in self.users):
             return []
-        return next(user for user in self.users if user == user_id)
+        return next(user for user in self.users if user.id == user_id)
 
 
 class FakeAdvsRepo:

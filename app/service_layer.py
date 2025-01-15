@@ -70,7 +70,7 @@ def update_user(authenticated_user_id: int,
                 uow) -> dict:
     check_current_user_func(user_id=authenticated_user_id, get_cuid=False)
     validated_data: dict[str, str] = validate_func(**new_data)
-    if validated_data["password"]:
+    if validated_data.get("password"):
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
         fetched_user: User = uow.users.get(authenticated_user_id)

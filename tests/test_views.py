@@ -52,8 +52,6 @@ def test_create_user_where_name_or_email_or_password_missed(
                                        f"'url': 'https://errors.pydantic.dev/2.9/v/missing'}}]"}
 
 
-
-
 @pytest.mark.run(order=2)
 @pytest.mark.parametrize(
     "adv_params, adv_id, user",
@@ -119,10 +117,10 @@ def test_update_user_with_correct_input_data(test_client, session_maker, access_
         data_from_db = \
             sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1000')).first()
     assert response.status_code == 200
-    assert response.json == {"modified user data": {"id": data_from_db[0],
-                                                    "name": data_from_db[1],
-                                                    "email": data_from_db[2],
-                                                    "creation_date": data_from_db[3].isoformat()}}
+    assert response.json == {"modified_data": {"id": data_from_db[0],
+                                               "name": data_from_db[1],
+                                               "email": data_from_db[2],
+                                               "creation_date": data_from_db[3].isoformat()}}
 
 
 @pytest.mark.run(order=15)
@@ -130,9 +128,9 @@ def test_update_user_with_incorrect_input_data(test_client, session_maker, acces
     new_data = {"name": "new_name"}
     response = test_client.patch("http://127.0.0.1:5000/users/10/",
                                  json=new_data,
-                                 headers={"Authorization": f"Bearer {access_token['user_1']}"})
-    assert response.status_code == 404
-    assert response.json == {"error": "entry with id=10 is not found"}
+                                 headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+    assert response.status_code == 403
+    assert response.json == {"errors": "Forbidden action."}
 
 
 def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, test_date):
