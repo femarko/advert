@@ -93,7 +93,7 @@ def test_update_user(
         uow=uow
     )
     assert result == expected_result
-    assert uow.users.users.pop().password == expected_password
+    assert uow.users.instances.pop().password == expected_password
 
 
 def test_update_user_raises_not_found_error(
