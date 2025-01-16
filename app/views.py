@@ -83,19 +83,6 @@ def update_user(user_id: int):
         raise HttpError(status_code=400, description=str(e))
     except app.errors.NotFoundError:
         raise HttpError(status_code=404, description=f"User is not found.")
-    #
-    # current_user_id: int = authentication.check_current_user(user_id=user_id)
-    # validated_data = get_validation_result(validation_func=validation.validate_data,
-    #                                        validation_model=validation.UpdateUser,
-    #                                        data=request.json)
-    # user_list: list[User] = get_filter_result(filter_func=service_layer.get_users_list,
-    #                                           column="id",
-    #                                           column_value=current_user_id,
-    #                                           session=request.session)
-    # if user_list:
-    #     updated_user = service_layer.edit_model_instance(model_instance=user_list[0], new_data=validated_data)
-    #     return jsonify({"modified user data": updated_user.get_user_data()}), 200
-    # raise HttpError(status_code=404, description=f"User with {validated_data['id']=} is not found.")
 
 
 @adv.route("/users/<int:user_id>/advertisements", methods=["GET"])
