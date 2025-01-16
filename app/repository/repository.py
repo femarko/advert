@@ -33,7 +33,7 @@ class Repository:
         self.session = session
         self.model_cl = None
 
-    def add(self, instance) -> ModelClass:
+    def add(self, instance):
         try:
             self.session.add(instance)
         except IntegrityError:
