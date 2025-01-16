@@ -165,6 +165,13 @@ class FakeBaseRepo:
             return []
         return next(instance for instance in self.instances if instance.id == instance_id)
 
+    def execute_commit(self):
+        for item in self.temp_added:
+            if not item.id:
+                item.id = random.randint(0, 9)
+            self.instances.add(item)
+        self.temp_added = []
+
 
 class FakeUsersRepo(FakeBaseRepo):
     def __init__(self, users: list):
@@ -178,7 +185,6 @@ class FakeAdvsRepo(FakeBaseRepo):
 
 class FakeUnitOfWork:
     def __init__(self, users: FakeUsersRepo, advs: FakeAdvsRepo):
-        self.commited = False
         self.users = users
         self.advs = advs
 
@@ -194,24 +200,9 @@ class FakeUnitOfWork:
 
     def commit(self):
         if self.users.temp_added:
-            for item in self.users.temp_added:
-                if item not in self.users.instances:
-                    if not item.id:
-                        item.id = random.randint(0, 9)
-                    self.users.instances.add(item)
-                else:
-                    raise app.errors.AlreadyExistsError
-            self.users.temp_added = []
+            self.users.execute_commit()
         if self.advs.temp_added:
-            for item in self.advs.temp_added:
-                if item not in self.advs.instances:
-                    if not item.id:
-                        item.id = random.randint(0, 9)
-                    self.advs.instances.add(item)
-                else:
-                    raise app.errors.AlreadyExistsError
-            self.advs.temp_added = []
-        self.commited = True
+            self.advs.execute_commit()
 
 
 @pytest.fixture
