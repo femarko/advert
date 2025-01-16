@@ -1,4 +1,5 @@
 import datetime
+import random
 
 import pytest
 import sqlalchemy
@@ -151,34 +152,32 @@ def fake_unit_of_work():
     return FakeUnitOfWork
 
 
-class FakeUsersRepo:
+class FakeBaseRepo:
+    def __init__(self, instances: list):
+        self.instances: set = set(instances)
+        self.temp_added = []
+
+    def add(self, instance):
+        self.temp_added.append(instance)
+
+    def get(self, instance_id):
+        if instance_id not in (instance.id for instance in self.instances):
+            return []
+        return next(instance for instance in self.instances if instance.id == instance_id)
+
+
+class FakeUsersRepo(FakeBaseRepo):
     def __init__(self, users: list):
-        self.users: set = set(users)
-
-    def add(self, user):
-        self.users.add(user)
-
-    def get(self, user_id):
-        if user_id not in (user.id for user in self.users):
-            return []
-        return next(user for user in self.users if user.id == user_id)
+        super().__init__(instances=users)
 
 
-class FakeAdvsRepo:
+class FakeAdvsRepo(FakeBaseRepo):
     def __init__(self, advs: list):
-        self.advs: set = set(advs)
-
-    def add(self, adv):
-        self.advs.add(adv)
-
-    def get(self, adv_id):
-        if adv_id not in (adv.id for adv in self.advs):
-            return []
-        return next(adv for adv in self.advs if adv.id == adv_id)
+        super().__init__(instances=advs)
 
 
 class FakeUnitOfWork:
-    def __init__(self, users, advs):
+    def __init__(self, users: FakeUsersRepo, advs: FakeAdvsRepo):
         self.commited = False
         self.users = users
         self.advs = advs
@@ -194,6 +193,24 @@ class FakeUnitOfWork:
         pass
 
     def commit(self):
+        if self.users.temp_added:
+            for item in self.users.temp_added:
+                if item not in self.users.instances:
+                    if not item.id:
+                        item.id = random.randint(0, 9)
+                    self.users.instances.add(item)
+                else:
+                    raise app.errors.AlreadyExistsError
+            self.users.temp_added = []
+        if self.advs.temp_added:
+            for item in self.advs.temp_added:
+                if item not in self.advs.instances:
+                    if not item.id:
+                        item.id = random.randint(0, 9)
+                    self.advs.instances.add(item)
+                else:
+                    raise app.errors.AlreadyExistsError
+            self.advs.temp_added = []
         self.commited = True
 
 
