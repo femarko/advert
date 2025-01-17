@@ -6,7 +6,7 @@ from typing import Type, Literal, Any
 
 from sqlalchemy.orm import Query
 
-
+import app.errors
 from app.models import AdvertisementColumns, UserColumns, ModelClass, User, Advertisement, ModelClasses
 
 
@@ -44,20 +44,20 @@ class ValidParams(enum.Enum):
     COMPARISON = [cmp.value for cmp in Comparison]
 
 
-@dataclass
-class QueryBase:
-    status: Literal["OK", "Failed"] = "OK"
-    errors: set[str] | list[str] | None = None
+# @dataclass
+# class QueryBase:
+#     # status: Literal["OK", "Failed"] = "OK"
+#     errors: set[str] | list[str] | None = None
 
 
-@dataclass
-class QueryResult(QueryBase):
-    result: sqlalchemy.orm.Query | None = None
+# @dataclass
+# class QueryResult(QueryBase):
+#     result: sqlalchemy.orm.Query | None = None
 
 
-@dataclass
-class FilterResult(QueryBase):
-    result: list[ModelClass] | dict[str, int | list[ModelClass]] | None = None
+# @dataclass
+# class FilterResult(QueryBase):
+#     result: list[ModelClass] | dict[str, int | list[ModelClass]] | None = None
 
 
 class Filter:
@@ -144,7 +144,7 @@ class Filter:
             case *_, :
                 pass
         if self.errors:
-            raise InvalidFilterParams
+            raise app.errors.ValidationError(list(self.errors))
 
     def get_filter_result(self,
                           model_class: Type[User | Advertisement] | None = None,
@@ -154,41 +154,38 @@ class Filter:
                           comparison: Comparison | None = None,
                           paginate: bool | None = None,
                           page: int | None = 1,
-                          per_page: int | None = 10) -> FilterResult:
-        try:
-            self._validate_params(params=Params, data={'model_class': model_class,
-                                                       'filter_type': filter_type,
-                                                       'comparison': comparison,
-                                                       'column': column,
-                                                       'column_value': column_value})
-            query: sqlalchemy.orm.Query = self.session.query(model_class)
-            model_attr = getattr(model_class, column, None)
-            if filter_type == FilterTypes.SEARCH_TEXT:
-                self.query_filtered = query.filter(model_attr.ilike(f'%{column_value}%'))
-            else:
-                comparison_operator = getattr(sqlalchemy.sql.expression.ColumnOperators,
-                                              self._comparison.get(comparison)["apply"])
-                if column == "creation_date":
-                    self.query_filtered = query.filter(
-                        comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
-                                            datetime.strptime(column_value, "%Y-%m-%d"))
-                    )
-                self.query_filtered = query.filter(comparison_operator(model_attr, column_value))
-            match paginate:
-                case True:
-                    offset = (page - 1) * per_page
-                    total: int = self.query_filtered.count()
-                    model_instances: list[ModelClass] = self.query_filtered.offset(offset).limit(per_page).all()
-                    paginated_data = {"page": page,
-                                      "per_page": per_page,
-                                      "total": total,
-                                      "total_pages": (total + per_page - 1) // per_page,
-                                      "items": [model_instance for model_instance in model_instances]}
-                    return FilterResult(result=paginated_data)
-                case _:
-                    return FilterResult(result=self.query_filtered.all())
-        except InvalidFilterParams:
-            return FilterResult(errors=list(self.errors))
+                          per_page: int | None = 10) -> list | dict:
+        self._validate_params(params=Params, data={'model_class': model_class,
+                                                   'filter_type': filter_type,
+                                                   'comparison': comparison,
+                                                   'column': column,
+                                                   'column_value': column_value})
+        query: sqlalchemy.orm.Query = self.session.query(model_class)
+        model_attr = getattr(model_class, column, None)
+        if filter_type == FilterTypes.SEARCH_TEXT:
+            self.query_filtered = query.filter(model_attr.ilike(f'%{column_value}%'))
+        else:
+            comparison_operator = getattr(sqlalchemy.sql.expression.ColumnOperators,
+                                          self._comparison.get(comparison)["apply"])
+            if column == "creation_date":
+                self.query_filtered = query.filter(
+                    comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
+                                        datetime.strptime(column_value, "%Y-%m-%d"))
+                )
+            self.query_filtered = query.filter(comparison_operator(model_attr, column_value))
+        match paginate:
+            case True:
+                offset = (page - 1) * per_page
+                total: int = self.query_filtered.count()
+                model_instances: list[ModelClass] = self.query_filtered.offset(offset).limit(per_page).all()
+                paginated_data = {"page": page,
+                                  "per_page": per_page,
+                                  "total": total,
+                                  "total_pages": (total + per_page - 1) // per_page,
+                                  "items": [model_instance.get_params() for model_instance in model_instances]}
+                return paginated_data
+            case _:
+                return self.query_filtered.all()
 
 
 def get_list_or_paginated_data(session,
@@ -199,7 +196,7 @@ def get_list_or_paginated_data(session,
                                column_value: str | int | datetime | None = None,
                                paginate: bool | None = None,
                                page: int | None = 1,
-                               per_page: int | None = 10) -> FilterResult:
+                               per_page: int | None = 10) -> dict:
     return Filter(session=session).get_filter_result(
         model_class, filter_type, column, column_value, comparison, paginate, page, per_page
     )
