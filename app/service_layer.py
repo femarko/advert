@@ -96,6 +96,18 @@ def get_related_advs(authenticated_user_id: int,
         return paginated_data
 
 
+def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
+    current_user_id: int = check_current_user_func(user_id=user_id)
+    with uow:
+        user_to_delete: User = uow.users.get(current_user_id)
+        if not user_to_delete:
+            raise app.errors.NotFoundError
+        deleted_user_params: dict[str, str | int] = user_to_delete.get_params()
+        uow.users.delete(user_to_delete)
+        uow.commit()
+    return deleted_user_params
+
+
 def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
     with uow:
         results = uow.users.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,

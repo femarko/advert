@@ -131,3 +131,28 @@ def test_get_related_advs(fake_check_current_user_func, fake_users_repo, fake_ad
         authenticated_user_id=1, check_current_user_func=fake_check_current_user_func, uow=fuow
     )
     assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."
+
+
+def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user_func, test_user):
+    fusers_repo = fake_users_repo(users=[test_user])
+    fuow = fake_unit_of_work(users=fusers_repo)
+    users_before_deletion = fusers_repo.get(instance_id=test_user.id)
+    deleted_user_params = service_layer.delete_user(
+        user_id=test_user.id, check_current_user_func=fake_check_current_user_func, uow=fuow
+    )
+    users_after_deletion = fusers_repo.get(instance_id=test_user.id)
+    assert users_before_deletion == test_user
+    assert users_after_deletion == []
+    assert deleted_user_params == test_user.get_params()
+
+
+def test_delete_user_raises_not_found_error(
+        fake_users_repo, fake_unit_of_work, fake_check_current_user_func, test_user
+):
+    fusers_repo = fake_users_repo(users=[test_user])
+    fuow = fake_unit_of_work(users=fusers_repo)
+    with pytest.raises(app.errors.NotFoundError):
+        service_layer.delete_user(user_id=100, check_current_user_func=fake_check_current_user_func, uow=fuow)
+
+
+
