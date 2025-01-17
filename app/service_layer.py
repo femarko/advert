@@ -111,7 +111,7 @@ def get_user_by_id(user_id: int, uow):
     return user_instance
 
 
-def get_adv(column: AdvertisementColumns, column_value: str | int | datetime, session) -> FilterResult:
+def get_adv(column: AdvertisementColumns, column_value: str | int | datetime, session):
     results: FilterResult = filter_and_return_list(session=session,
                                                    model_class=Advertisement,
                                                    filter_type=FilterTypes.COLUMN_VALUE,

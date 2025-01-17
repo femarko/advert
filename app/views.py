@@ -28,7 +28,7 @@ def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[s
         raise HttpError(status_code=400, description=validation_result.validation_errors)
 
 
-def get_filter_result(filter_func: Callable[..., FilterResult], **params: Any):
+def get_filter_result(filter_func: Callable, **params: Any):
     filter_result = filter_func(**params)
     if filter_result.status == "OK":
         return filter_result.result

@@ -6,7 +6,6 @@ import app.errors
 from app import pass_hashing, authentication, unit_of_work, validation, models
 import app.authentication
 from app import service_layer
-from app.repository.filtering import FilterResult
 
 
 @pytest.mark.run(order=9)
