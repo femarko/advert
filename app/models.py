@@ -34,7 +34,7 @@ class User(Base):
                 "email": self.email,
                 "creation_date": self.creation_date.isoformat()}
 
-    def get_user_advs(self) -> list[dict[str, str | int | datetime]]:
+    def get_user_advs(self) -> list[dict[str, str | int]]:
         return [adv.get_adv_params() for adv in self.advertisements]
 
 
@@ -51,7 +51,7 @@ class Advertisement(Base):
     def __repr__(self):
         return f'{self.title}\n{self.description}'
 
-    def get_params(self) -> dict[str, str | int | datetime]:
+    def get_params(self) -> dict[str, str | int]:
         return {"id": self.id,
                 "title": self.title,
                 "description": self.description,
