@@ -80,8 +80,9 @@ def update_user(authenticated_user_id: int,
 
 def get_related_advs(authenticated_user_id: int,
                      check_current_user_func: Callable,
-                     page: int,
-                     per_page: int, uow) -> dict[str, int | list[ModelClass]]:
+                     uow,
+                     page: Optional[int] = None,
+                     per_page: Optional[int] = None) -> dict[str, int | list[ModelClass]]:
     current_user_id = check_current_user_func(user_id=authenticated_user_id)
     with uow:
         paginated_data = uow.advs.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
@@ -104,6 +105,7 @@ def get_users_list(column: UserColumns, column_value: str | int | datetime, uow)
         # users_list: list[User] = process_result(result=results)
         # return users_list
         return results
+
 
 def get_user_by_id(user_id: int, uow):
     with uow:
