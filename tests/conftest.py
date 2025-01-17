@@ -160,6 +160,7 @@ class FakeBaseRepo:
     def __init__(self, instances: list):
         self.instances: set = set(instances)
         self.temp_added = []
+        self.temp_deleted = []
 
     def add(self, instance):
         self.temp_added.append(instance)
@@ -172,12 +173,20 @@ class FakeBaseRepo:
     def get_list_or_paginated_data(self, **kwargs):
         return f"{self.__str__()}: get_list_or_paginated_data() called."
 
-    def execute_commit(self):
+    def delete(self, instance):
+        self.temp_deleted.append(instance)
+
+    def execute_adding(self):
         for item in self.temp_added:
             if not item.id:
                 item.id = random.randint(0, 9)
             self.instances.add(item)
         self.temp_added = []
+
+    def execute_deletion(self):
+        for item in self.temp_deleted:
+            self.instances.remove(item)
+        self.temp_deleted = []
 
 
 class FakeUsersRepo(FakeBaseRepo):
@@ -212,10 +221,14 @@ class FakeUnitOfWork:
         pass
 
     def commit(self):
-        if self.users.temp_added:
-            self.users.execute_commit()
-        if self.advs.temp_added:
-            self.advs.execute_commit()
+        if self.users and self.users.temp_added:
+            self.users.execute_adding()
+        if self.advs and self.advs.temp_added:
+            self.advs.execute_adding()
+        if self.users and self.users.temp_deleted:
+            self.users.execute_deletion()
+        if self.advs and self.advs.temp_deleted:
+            self.advs.execute_deletion()
 
 
 @pytest.fixture
