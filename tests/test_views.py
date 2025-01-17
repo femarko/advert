@@ -316,15 +316,28 @@ def test_delete_adv_with_wrong_authorized_user(test_client, session_maker, acces
 
 @pytest.mark.run(order=23)
 def test_delete_user(test_client, session_maker, access_token):
-    response = test_client.delete("http://127.0.0.1:5000/users/1/",
-                                  headers={"Authorization": f"Bearer {access_token['user_1']}"})
+    response = test_client.delete("http://127.0.0.1:5000/users/1000/",
+                                  headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     session = session_maker
     with session() as sess:
-        user_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "user" WHERE id = 1')).first()
-        related_adv_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE user_id = 1')).first()
+        user_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "user" WHERE id = 1000')).first()
+        related_adv_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE user_id = 1000')).first()
     assert response.status_code == 200
     assert user_from_db is None
     assert related_adv_from_db is None
+
+
+def test_delete_user_returns_status_403_when_current_user_check_fails(test_client, session_maker, access_token):
+    response = test_client.delete("http://127.0.0.1:5000/users/1000/",
+                                  headers={"Authorization": f"Bearer {access_token['user_1001']}"})
+    assert response.status_code == 403
+    assert response.json == {"errors": "Unavailable operation."}
+
+
+def test_delete_user_returns_status_401_when_user_is_not_authenticated(test_client, session_maker, access_token):
+    response = test_client.delete("http://127.0.0.1:5000/users/1000/")
+    assert response.status_code == 401
+    assert response.json == {"msg": "Missing Authorization Header"}
 
 
 @pytest.mark.run(order=24)

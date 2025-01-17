@@ -108,17 +108,13 @@ def get_related_advs(user_id: int):
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])
 @jwt_required()
 def delete_user(user_id: int):
-    current_user_id: int = authentication.check_current_user(user_id=user_id)
-    filter_result: FilterResult = service_layer.get_users_list(
-        column="id", column_value=current_user_id, session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.result:
-            user: User = filter_result.result[0]
-            service_layer.delete_model_instance(model_instance=user)
-            return jsonify({"deleted user data": user.get_params()}), 200
-        raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    try:
+        deleted_user_params: dict[str, str | int] = service_layer.delete_user(
+            user_id=user_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
+        )
+        return jsonify({"deleted_user_params": deleted_user_params}), 200
+    except app.errors.CurrentUserError:
+        raise HttpError(status_code=403, description="Unavailable operation.")
 
 
 @adv.route("/advertisements/<int:adv_id>/", methods=["GET"])
