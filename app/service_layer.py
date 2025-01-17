@@ -9,7 +9,7 @@ from app import models, adv, validation, pass_hashing
 from app.error_handlers import HttpError
 from app.errors import NotFoundError, ValidationError, AccessDeniedError, FailedToGetResultError, CurrentUserError, \
     AlreadyExistsError
-from app.repository.filtering import FilterResult, get_list_or_paginated_data
+from app.repository.filtering import get_list_or_paginated_data
 
 import logging
 
@@ -43,7 +43,7 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     current_user_id: int = check_current_user_func(user_id=user_id, get_cuid=True)
     with uow:
         user = uow.users.get(current_user_id)
-    return user.get_user_data()
+    return user.get_params()
 
 
 def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
@@ -53,7 +53,7 @@ def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_fu
     with uow:
         uow.users.add(user)
         uow.commit()
-        user_id: int = user.get_user_data()["id"]
+        user_id: int = user.get_params()["id"]
         return user_id
 
 
@@ -75,43 +75,35 @@ def update_user(authenticated_user_id: int,
             setattr(fetched_user, attr_name, attr_value)
         uow.users.add(fetched_user)
         uow.commit()
-        return fetched_user.get_user_data()
+        return fetched_user.get_params()
 
 
-def get_related_advs(current_user_id: int, page: int, per_page: int, uow) -> dict[str, int | list[ModelClass]]:
-    # with uow:
-    #     filter_result = uow.advs.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
-    #                                            column=AdvertisementColumns.USER_ID,
-    #                                            column_value=current_user_id,
-    #                                            comparison=Comparison.IS,
-    #                                            page=page,
-    #                                            per_page=per_page)
-    #     filter_result.result["items"] = [item.get_adv_params() for item in filter_result.result["items"]]
-    # return filter_result.result
+def get_related_advs(authenticated_user_id: int,
+                     check_current_user_func: Callable,
+                     page: int,
+                     per_page: int, uow) -> dict[str, int | list[ModelClass]]:
+    current_user_id = check_current_user_func(user_id=authenticated_user_id)
     with uow:
-        filter_result: Protocol[BaseResult] = uow.advs.get_paginated(filter_type=FilterTypes.COLUMN_VALUE,
-                                                                     column=AdvertisementColumns.USER_ID,
-                                                                     column_value=current_user_id,
-                                                                     comparison=Comparison.IS,
-                                                                     page=page,
-                                                                     per_page=per_page)
-        try:
-            processed_result = process_result(result=filter_result)
-        except FailedToGetResultError:
-            raise ValidationError(f"{processed_result}")
-        return processed_result
+        paginated_data = uow.advs.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
+                                                             comparison=Comparison.IS,
+                                                             column=AdvertisementColumns.USER_ID,
+                                                             column_value=current_user_id,
+                                                             paginate=True,
+                                                             page=page,
+                                                             per_page=per_page)
+
+        return paginated_data
 
 
 def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
     with uow:
-        results = uow.users.get_list_or_paginated_data(filter_func=get_list_or_paginated_data,
-                                                       filter_type=FilterTypes.COLUMN_VALUE,
+        results = uow.users.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
                                                        comparison=Comparison.IS,
                                                        column=column,
                                                        column_value=column_value)
-        users_list: list[User] = process_result(result=results)
-        return users_list
-
+        # users_list: list[User] = process_result(result=results)
+        # return users_list
+        return results
 
 def get_user_by_id(user_id: int, uow):
     with uow:

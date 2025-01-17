@@ -7,7 +7,7 @@ import app.errors
 import app.repository.filtering
 from app import adv, models, pass_hashing, validation, service_layer, authentication
 from app.error_handlers import HttpError
-from app.repository.filtering import FilterResult
+
 from app.repository.repository import UserRepository, AdvRepository
 from app.models import Advertisement, User
 from app.unit_of_work import UnitOfWork
@@ -88,15 +88,20 @@ def update_user(user_id: int):
 @adv.route("/users/<int:user_id>/advertisements", methods=["GET"])
 @jwt_required()
 def get_related_advs(user_id: int):
-    current_user_id: int = authentication.check_current_user(user_id=user_id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     try:
         result = service_layer.get_related_advs(
-            current_user_id=current_user_id, page=page, per_page=per_page, uow=UnitOfWork()
+            authenticated_user_id=user_id,
+            check_current_user_func=authentication.check_current_user,
+            page=page,
+            per_page=per_page,
+            uow=UnitOfWork()
         )
         return result, 200
-    except app.repository.filtering.InvalidFilterParams as e:
+    except app.errors.CurrentUserError:
+        raise HttpError(status_code=403, description="Unavailable operation.")
+    except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
 
 
@@ -111,7 +116,7 @@ def delete_user(user_id: int):
         if filter_result.result:
             user: User = filter_result.result[0]
             service_layer.delete_model_instance(model_instance=user)
-            return jsonify({"deleted user data": user.get_user_data()}), 200
+            return jsonify({"deleted user data": user.get_params()}), 200
         raise HttpError(status_code=404, description=f"User with {current_user_id=} is not found.")
     raise HttpError(status_code=400, description=filter_result.errors)
 
@@ -126,7 +131,7 @@ def get_adv_params(adv_id: int):
         if filter_result.result:
             adv_instance: Advertisement = filter_result.result[0]
             authentication.check_current_user(user_id=adv_instance.user_id, get_cuid=False)
-            return jsonify(adv_instance.get_adv_params()), 200
+            return jsonify(adv_instance.get_params()), 200
         raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
     raise HttpError(status_code=400, description=filter_result.errors)
 
@@ -201,7 +206,7 @@ def delete_adv(adv_id: int):
             adv_instance: Advertisement = filter_result.result[0]
             authentication.check_current_user(user_id=adv_instance.user_id, get_cuid=False)
             service_layer.delete_model_instance(model_instance=adv_instance)
-            return jsonify({"deleted advertisement params": adv_instance.get_adv_params()}), 200
+            return jsonify({"deleted advertisement params": adv_instance.get_params()}), 200
         raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
     raise HttpError(status_code=400, description=filter_result.errors)
 
