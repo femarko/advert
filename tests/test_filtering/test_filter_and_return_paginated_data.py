@@ -2,7 +2,7 @@ import pytest
 
 import app.repository.filtering
 from app.models import User, Advertisement
-from app.repository.filtering import FilterResult
+import app.errors
 from tests.conftest import engine, session_maker, test_date, create_test_users_and_advs
 
 
@@ -65,24 +65,19 @@ def test_filter_and_return_paginated_data_with_correct_params(
     session = session_maker
     with session() as sess:
         filter_result = app.repository.filtering.get_list_or_paginated_data(session=sess, paginate=True, **params)
-    assert type(filter_result) is app.repository.filtering.FilterResult
-    assert filter_result.status == "OK"
-    assert type(filter_result.result) is dict
-    assert filter_result.result["page"] == 1
-    assert filter_result.result["per_page"] == 10
-    assert filter_result.result["total_pages"] == 1
-    assert type(filter_result.result["items"]) == list
-    assert \
-        set([(isinstance(item, params["model_class"]), item.creation_date) for item in filter_result.result["items"]]) \
-        == {(True, test_date)}
+    assert filter_result["page"] == 1
+    assert filter_result["per_page"] == 10
+    assert filter_result["total_pages"] == 1
+    assert type(filter_result["items"]) == list
+    assert set([(item["creation_date"]) for item in filter_result["items"]]) == {test_date.isoformat()}
     if params["model_class"] is User:
-        assert filter_result.result["total"] == 2
-        assert len(filter_result.result["items"]) == 2
-        assert set([item.id for item in filter_result.result["items"]]) == {1000, 1001}
+        assert filter_result["total"] == 2
+        assert len(filter_result["items"]) == 2
+        assert set([item["id"] for item in filter_result["items"]]) == {1000, 1001}
     else:
-        assert filter_result.result["total"] == 4
-        assert len(filter_result.result["items"]) == 4
-        assert set([item.id for item in filter_result.result["items"]]) == {1000, 1001, 1003, 1004}
+        assert filter_result["total"] == 4
+        assert len(filter_result["items"]) == 4
+        assert set([item["id"] for item in filter_result["items"]]) == {1000, 1001, 1003, 1004}
 
 
 def test_filter_and_return_paginated_data_all_params_are_wrong(session_maker):
@@ -113,12 +108,11 @@ def test_filter_and_return_paginated_data_all_params_are_wrong(session_maker):
 def test_filter_and_return_paginated_data_all_params_are_missing(session_maker):
     params = {}
     session = session_maker
-    with session() as sess:
-        filter_result = filter_and_return_paginated_data(session=sess, **params)
-    assert isinstance(filter_result, FilterResult)
-    assert filter_result.status == "Failed"
-    assert filter_result.result is None
-    assert filter_result.errors == {f"Value for 'model_class' is not found.",
+    with pytest.raises(expected_exception=app.errors.ValidationError) as e:
+        with session() as sess:
+            app.repository.filtering.get_list_or_paginated_data(session=sess, **params)
+    assert e.type == app.errors.ValidationError
+    assert set(e.value.args[0]) == {f"Value for 'model_class' is not found.",
                                     f"Value for 'filter_type' is not found.",
                                     f"Value for 'column' is not found.",
                                     f"Value for 'comparison' is not found."}
