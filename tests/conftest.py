@@ -169,6 +169,9 @@ class FakeBaseRepo:
             return []
         return next(instance for instance in self.instances if instance.id == instance_id)
 
+    def get_list_or_paginated_data(self, **kwargs):
+        return f"{self.__str__()}: get_list_or_paginated_data() called."
+
     def execute_commit(self):
         for item in self.temp_added:
             if not item.id:
@@ -181,10 +184,16 @@ class FakeUsersRepo(FakeBaseRepo):
     def __init__(self, users: list):
         super().__init__(instances=users)
 
+    def __str__(self):
+        return "FakeUsersRepo"
+
 
 class FakeAdvsRepo(FakeBaseRepo):
     def __init__(self, advs: list):
         super().__init__(instances=advs)
+
+    def __str__(self):
+        return "FakeAdvsRepo"
 
 
 class FakeUnitOfWork:
@@ -220,3 +229,16 @@ def test_user(test_date):
         advertisements=[]
     )
     return user
+
+
+@pytest.fixture
+def test_adv(test_date, test_user):
+    testadv = models.Advertisement(
+        id=2,
+        title="test_adv",
+        description="test_description",
+        creation_date=test_date,
+        user_id=test_user.id,
+        user=None
+    )
+    return testadv

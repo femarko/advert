@@ -121,3 +121,13 @@ def test_update_user_raises_not_found_error(
             uow=uow
         )
     assert e.type == app.errors.NotFoundError
+
+
+def test_get_related_advs(fake_check_current_user_func, fake_users_repo, fake_advs_repo, fake_unit_of_work):
+    fusers_repo = fake_users_repo(users=[])
+    fadvs_repo = fake_advs_repo(advs=[])
+    fuow = fake_unit_of_work(users=fusers_repo, advs=fadvs_repo)
+    result = service_layer.get_related_advs(
+        authenticated_user_id=1, check_current_user_func=fake_check_current_user_func, uow=fuow
+    )
+    assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."
