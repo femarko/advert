@@ -1,5 +1,6 @@
 import datetime
 import random
+from typing import Optional
 
 import pytest
 import sqlalchemy
@@ -101,9 +102,9 @@ def create_test_users_and_advs(session_maker, test_date):
                               user_id=i))
             sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
                                          'VALUES (:id, :title, :description, :creation_date, :user_id)'),
-                         dict(id=i+3,
-                              title=f"test_filter_{i+3}",
-                              description=f"test_filter_{i+3}",
+                         dict(id=i + 3,
+                              title=f"test_filter_{i + 3}",
+                              description=f"test_filter_{i + 3}",
                               creation_date=test_date,
                               user_id=i))
             sess.commit()
@@ -120,6 +121,7 @@ def create_test_users_and_advs(session_maker, test_date):
 def fake_check_current_user_func():
     def foo(user_id: int, get_cuid: bool = True):
         return user_id
+
     return foo
 
 
@@ -127,6 +129,7 @@ def fake_check_current_user_func():
 def fake_validate_func():
     def foo(**data):
         return data
+
     return foo
 
 
@@ -134,6 +137,7 @@ def fake_validate_func():
 def fake_hash_pass_func():
     def foo(password: str):
         return password
+
     return foo
 
 
@@ -184,7 +188,7 @@ class FakeAdvsRepo(FakeBaseRepo):
 
 
 class FakeUnitOfWork:
-    def __init__(self, users: FakeUsersRepo, advs: FakeAdvsRepo):
+    def __init__(self, users: Optional[FakeUsersRepo] = None, advs: Optional[FakeAdvsRepo] = None):
         self.users = users
         self.advs = advs
 
