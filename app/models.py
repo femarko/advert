@@ -28,7 +28,7 @@ class User(Base):
     creation_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     advertisements: Mapped[list["Advertisement"]] = relationship(back_populates="user", cascade="delete")
 
-    def get_user_data(self) -> dict[str, str | int | datetime]:
+    def get_params(self) -> dict[str, str | int | datetime]:
         return {"id": self.id,
                 "name": self.name,
                 "email": self.email,
@@ -51,7 +51,7 @@ class Advertisement(Base):
     def __repr__(self):
         return f'{self.title}\n{self.description}'
 
-    def get_adv_params(self) -> dict[str, str | int | datetime]:
+    def get_params(self) -> dict[str, str | int | datetime]:
         return {"id": self.id,
                 "title": self.title,
                 "description": self.description,
