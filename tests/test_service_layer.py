@@ -32,14 +32,24 @@ def test_get_user(session_maker):
     assert filter_result.result[0].creation_date == expected[4]
 
 
-def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo, test_user):
-    fuow = fake_unit_of_work(users=fake_users_repo([test_user]), advs=[])
-    result = service_layer.get_user_data(user_id=1, check_current_user_func=fake_check_current_user_func, uow=fuow)
+def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo,
+                       fake_validate_func, fake_hash_pass_func, test_date):
+    user_data = {
+        "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
+    }
+    fusers_repo = fake_users_repo(users=[])
+    fuow = fake_unit_of_work(users=fusers_repo)
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
+    )
+    result = service_layer.get_user_data(
+        user_id=user_id, check_current_user_func=fake_check_current_user_func, uow=fuow
+    )
     expected_result = {
-        "id": test_user.id,
-        "name": test_user.name,
-        "email": test_user.email,
-        "creation_date": test_user.creation_date.isoformat()
+        "id": user_id,
+        "name": user_data["name"],
+        "email": user_data["email"],
+        "creation_date": test_date.isoformat()
     }
     assert result == expected_result
 
@@ -65,26 +75,22 @@ def test_create_user(
     assert data_from_repo.creation_date == user_data["creation_date"]
 
 
-def test_update_user(
-        fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo,
-        fake_unit_of_work
-):
+def test_update_user(fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo,
+                     fake_advs_repo, fake_unit_of_work, test_date):
     new_data = {"name": "new_name", "email": "new_email", "password": "new_pass"}
-    authenticated_user_id = 1
-    creation_date = datetime.datetime.today()
-    user = models.User(
-        id=1,
-        name="test_name",
-        email="test_email",
-        password="test_pass",
-        creation_date=creation_date,
-        advertisements=[]
+    user_data = {
+        "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
+    }
+    fusers_repo = fake_users_repo(users=[])
+    fuow = fake_unit_of_work(users=fusers_repo)
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
     )
-    uow = fake_unit_of_work(users=fake_users_repo([user]), advs=fake_advs_repo([]))
-    expected_result = {"id": 1, "creation_date": creation_date.isoformat(), **new_data}
+    uow = fake_unit_of_work(users=fusers_repo)
+    expected_result = {"id": user_id, "creation_date": test_date.isoformat(), **new_data}
     expected_password = expected_result.pop("password")
     result = service_layer.update_user(
-        authenticated_user_id=authenticated_user_id,
+        authenticated_user_id=user_id,
         check_current_user_func=fake_check_current_user_func,
         validate_func=fake_validate_func,
         hash_pass_func=fake_hash_pass_func,
@@ -97,30 +103,27 @@ def test_update_user(
 
 def test_update_user_raises_not_found_error(
         fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo,
-        fake_unit_of_work
+        fake_unit_of_work, test_date
 ):
     new_data = {"name": "new_name", "email": "new_email", "password": "new_pass"}
-    authenticated_user_id = 2
-    creation_date = datetime.datetime.today()
-    user = models.User(
-        id=1,
-        name="test_name",
-        email="test_email",
-        password="test_pass",
-        creation_date=creation_date,
-        advertisements=[]
+    user_data = {
+        "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
+    }
+    fusers_repo = fake_users_repo(users=[])
+    fuow = fake_unit_of_work(users=fusers_repo)
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
     )
-    uow = fake_unit_of_work(users=fake_users_repo([user]), advs=fake_advs_repo([]))
-    with pytest.raises(app.errors.NotFoundError) as e:
+    uow = fake_unit_of_work(users=fusers_repo)
+    with pytest.raises(app.errors.NotFoundError):
         service_layer.update_user(
-            authenticated_user_id=authenticated_user_id,
+            authenticated_user_id=user_id+1,
             check_current_user_func=fake_check_current_user_func,
             validate_func=fake_validate_func,
             hash_pass_func=fake_hash_pass_func,
             new_data=new_data,
             uow=uow
         )
-    assert e.type == app.errors.NotFoundError
 
 
 def test_get_related_advs(fake_check_current_user_func, fake_users_repo, fake_advs_repo, fake_unit_of_work):
@@ -150,13 +153,19 @@ def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user
     assert deleted_user_params == user_before_deletion.get_params()
 
 
-def test_delete_user_raises_not_found_error(
-        fake_users_repo, fake_unit_of_work, fake_check_current_user_func, test_user
-):
-    fusers_repo = fake_users_repo(users=[test_user])
+def test_delete_user_raises_not_found_error(fake_users_repo, fake_unit_of_work, fake_check_current_user_func,
+                                            fake_validate_func, fake_hash_pass_func, test_date):
+    user_data = {
+        "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
+    }
+    fusers_repo = fake_users_repo(users=[])
     fuow = fake_unit_of_work(users=fusers_repo)
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
+    )
+    uow = fake_unit_of_work(users=fusers_repo)
     with pytest.raises(app.errors.NotFoundError):
-        service_layer.delete_user(user_id=100, check_current_user_func=fake_check_current_user_func, uow=fuow)
+        service_layer.delete_user(user_id=user_id+1, check_current_user_func=fake_check_current_user_func, uow=uow)
 
 
 
