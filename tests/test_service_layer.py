@@ -133,17 +133,21 @@ def test_get_related_advs(fake_check_current_user_func, fake_users_repo, fake_ad
     assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."
 
 
-def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user_func, test_user):
-    fusers_repo = fake_users_repo(users=[test_user])
+def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user_func, fake_validate_func,
+                     fake_hash_pass_func, test_user):
+    user_data = {"name": "test_name", "email": "test_email@test.com", "password": "test_pass"}
+    fusers_repo = fake_users_repo(users=[])
     fuow = fake_unit_of_work(users=fusers_repo)
-    users_before_deletion = fusers_repo.get(instance_id=test_user.id)
-    deleted_user_params = service_layer.delete_user(
-        user_id=test_user.id, check_current_user_func=fake_check_current_user_func, uow=fuow
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
     )
-    users_after_deletion = fusers_repo.get(instance_id=test_user.id)
-    assert users_before_deletion == test_user
+    user_before_deletion = fusers_repo.get(instance_id=user_id)
+    deleted_user_params = service_layer.delete_user(
+        user_id=user_id, check_current_user_func=fake_check_current_user_func, uow=fuow
+    )
+    users_after_deletion = fusers_repo.get(instance_id=user_id)
     assert users_after_deletion == []
-    assert deleted_user_params == test_user.get_params()
+    assert deleted_user_params == user_before_deletion.get_params()
 
 
 def test_delete_user_raises_not_found_error(
