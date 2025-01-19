@@ -118,6 +118,13 @@ def create_test_users_and_advs(session_maker, test_date):
 
 
 @pytest.fixture
+def fake_get_auth_user_id_func():
+    def foo():
+        return 1
+    return foo
+
+
+@pytest.fixture
 def fake_check_current_user_func():
     def foo(user_id: int, get_cuid: bool = True):
         return user_id
