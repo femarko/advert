@@ -60,3 +60,5 @@ def validate_data_for_user_updating(**user_data):
     return validate_data(validation_model=UpdateUser, data={**user_data})
 
 
+def validate_data_for_adv_creation(**adv_params):
+    return validate_data(validation_model=CreateAdv, data={**adv_params})
