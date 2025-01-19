@@ -180,10 +180,7 @@ class FakeBaseRepo:
         for item in self.temp_added:
             if not item.id:
                 item.id = random.randint(0, 9)
-            if not item.creation_date:
-                item.creation_date = datetime.datetime.now()
-            if not item.advertisements:
-                item.advertisements = []
+            item.creation_date = datetime.datetime(1900, 1, 1)
             self.instances.add(item)
         self.temp_added = []
 
