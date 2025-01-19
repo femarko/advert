@@ -108,8 +108,9 @@ def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[st
     return deleted_user_params
 
 
-def create_adv(authenticated_user_id: int, adv_params: dict[str, str | int], validate_func: Callable,
-               check_current_user_func: Callable, uow):
+def create_adv(get_auth_user_id_func: Callable, validate_func: Callable, check_current_user_func: Callable,
+               adv_params: dict[str, str | int], uow):
+    authenticated_user_id: int = get_auth_user_id_func()
     current_user_id: int = check_current_user_func(user_id=authenticated_user_id)
     validated_data = validate_func(**adv_params)
     validated_data |= {"user_id": current_user_id}
