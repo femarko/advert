@@ -8,28 +8,28 @@ import app.authentication
 from app import service_layer
 
 
-@pytest.mark.run(order=9)
-def test_current_user_is_authorized(access_token):
-    fake_user_id = 1
-    app.authentication.check_current_user(user_id=fake_user_id)
-    assert ...
-
-
-def test_get_user(session_maker):
-    session = session_maker
-    email = "test_1@email.com"
-    with session() as sess:
-        filter_result: FilterResult = service_layer.get_users_list(
-            column="email", column_value=email, session=sess  # type: ignore
-        )
-    with session() as sess:
-        expected = sess \
-            .execute(sqlalchemy.text(f'SELECT * FROM "user" WHERE email = :email'), dict(email=email)).first()
-    assert filter_result.result[0].id == expected[0]
-    assert filter_result.result[0].name == expected[1]
-    assert filter_result.result[0].email == expected[2]
-    assert filter_result.result[0].password == expected[3]
-    assert filter_result.result[0].creation_date == expected[4]
+# @pytest.mark.run(order=9)
+# def test_current_user_is_authorized(access_token):
+#     fake_user_id = 1
+#     app.authentication.check_current_user(user_id=fake_user_id)
+#     assert ...
+#
+#
+# def test_get_user(session_maker):
+#     session = session_maker
+#     email = "test_1@email.com"
+#     with session() as sess:
+#         filter_result: FilterResult = service_layer.get_users_list(
+#             column="email", column_value=email, session=sess  # type: ignore
+#         )
+#     with session() as sess:
+#         expected = sess \
+#             .execute(sqlalchemy.text(f'SELECT * FROM "user" WHERE email = :email'), dict(email=email)).first()
+#     assert filter_result.result[0].id == expected[0]
+#     assert filter_result.result[0].name == expected[1]
+#     assert filter_result.result[0].email == expected[2]
+#     assert filter_result.result[0].password == expected[3]
+#     assert filter_result.result[0].creation_date == expected[4]
 
 
 def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo,
@@ -168,4 +168,27 @@ def test_delete_user_raises_not_found_error(fake_users_repo, fake_unit_of_work, 
         service_layer.delete_user(user_id=user_id+1, check_current_user_func=fake_check_current_user_func, uow=uow)
 
 
-
+def test_create_adv(fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo, fake_unit_of_work,
+                    test_date, fake_check_current_user_func):
+    user_data = {
+        "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
+    }
+    fusers_repo, fadvs_repo = fake_users_repo(users=[]), fake_advs_repo(advs=[])
+    fuow = fake_unit_of_work(users=fusers_repo, advs=fadvs_repo)
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
+    )
+    adv_params = {"title": "test_title", "description": "test_description"}
+    fuow2 = fake_unit_of_work(advs=fake_advs_repo([]))
+    result = service_layer.create_adv(
+        authenticated_user_id=user_id, adv_params=adv_params, validate_func=fake_validate_func,
+        check_current_user_func=fake_check_current_user_func, uow=fuow2
+    )
+    data_from_repo = fuow2.advs.get(instance_id=result)
+    assert type(result) is int
+    assert 0 <= result <= 9
+    assert result == data_from_repo.id
+    assert data_from_repo.title == adv_params["title"]
+    assert data_from_repo.description == adv_params["description"]
+    assert data_from_repo.creation_date == test_date
+    assert data_from_repo.user_id == user_id

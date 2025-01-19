@@ -108,6 +108,18 @@ def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[st
     return deleted_user_params
 
 
+def create_adv(authenticated_user_id: int, adv_params: dict[str, str | int], validate_func: Callable,
+               check_current_user_func: Callable, uow):
+    current_user_id: int = check_current_user_func(user_id=authenticated_user_id)
+    validated_data = validate_func(**adv_params)
+    validated_data |= {"user_id": current_user_id}
+    adv = Advertisement(**validated_data)
+    with uow:
+        uow.advs.add(adv)
+        uow.commit()
+        return adv.id
+
+
 def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
     with uow:
         results = uow.users.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
