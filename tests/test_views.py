@@ -14,19 +14,17 @@ def register_urls():
 
 
 @pytest.mark.run(order=1)
-def test_create_user(test_client, session_maker, engine):
+def test_create_user(test_client, clear_db_before_and_after_test):
     user_data = {"name": "test_name", "email": "test@email.com", "password": "test_password"}
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * from "user"')).first()
-        sess.execute(sqlalchemy.text('DELETE from "user"'))
-        sess.commit()
+    uow = unit_of_work.UnitOfWork()
+    with uow:
+        user_from_repo = uow.users.get(instance_id=response.json["user_id"])
     assert response.status_code == 201
-    assert response.json == {"user id": data_from_db[0]}
-    assert data_from_db[1] == user_data["name"]
-    assert data_from_db[2] == user_data["email"]
-    assert pass_hashing.check_password(hashed_password=data_from_db[3], password=user_data["password"])
+    assert response.json == {"user_id": user_from_repo.id}
+    assert user_from_repo.name == user_data["name"]
+    assert user_from_repo.email == user_data["email"]
+    assert pass_hashing.check_password(hashed_password=user_from_repo.password, password=user_data["password"])
 
 
 def test_create_user_with_integrity_error(test_client, session_maker, engine, create_test_users_and_advs):
