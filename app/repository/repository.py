@@ -18,7 +18,7 @@ class RepoProto(Protocol):
     def add(self, instance) -> None:
         pass
 
-    def get(self, instance_id) -> None:
+    def get(self, instance_id: object):
         pass
 
     def get_list_or_paginated_data(self, filter_func: Callable, **kwargs: Any) -> list | dict:
