@@ -57,7 +57,7 @@ def create_user():
             validate_func=validation.validate_data_for_user_creation,
             hash_pass_func=pass_hashing.hash_password,
             uow=UnitOfWork())
-        return jsonify({"user id": new_user_id}), 201
+        return jsonify({"user_id": new_user_id}), 201
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
     except app.errors.AlreadyExistsError:
