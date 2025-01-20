@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Callable, Any, Protocol, Optional
 
 from sqlalchemy.exc import IntegrityError
@@ -18,10 +19,17 @@ class RepoProto(Protocol):
     def add(self, instance) -> None:
         pass
 
-    def get(self, instance_id: object):
+    def get(self, instance_id: int) -> Any:
         pass
 
-    def get_list_or_paginated_data(self, filter_func: Callable, **kwargs: Any) -> list | dict:
+    def get_list_or_paginated_data(self,
+                                   filter_type: FilterTypes,
+                                   comparison: Comparison,
+                                   column: UserColumns | AdvertisementColumns,
+                                   column_value: int | str| datetime,
+                                   paginate: Optional[bool] = False,
+                                   page: Optional[int] = None,
+                                   per_page: Optional[int] = None) -> list | dict:
         pass
 
     def delete(self, instance) -> None:
@@ -33,22 +41,23 @@ class Repository:
         self.session = session
         self.model_cl = None
 
-    def add(self, instance):
+    def add(self, instance) -> None:
         try:
             self.session.add(instance)
         except IntegrityError:
             raise app.errors.AlreadyExistsError
 
-    def get(self, instance_id):
+    def get(self, instance_id: int) -> Any:
         return self.session.get(self.model_cl, instance_id)
 
-    def get_list_or_paginated_data(self, filter_type: FilterTypes,
+    def get_list_or_paginated_data(self,
+                                   filter_type: FilterTypes,
                                    comparison: Comparison,
                                    column: UserColumns | AdvertisementColumns,
-                                   column_value,
+                                   column_value: int | str| datetime,
                                    paginate: Optional[bool] = False,
                                    page: Optional[int] = None,
-                                   per_page: Optional[int] = None):
+                                   per_page: Optional[int] = None) -> list | dict:
         return filtering.get_list_or_paginated_data(
             session=self.session,
             model_class=self.model_cl,
@@ -61,7 +70,7 @@ class Repository:
             per_page=per_page
         )
 
-    def delete(self, instance):
+    def delete(self, instance) -> None:
         self.session.delete(instance)
 
 
