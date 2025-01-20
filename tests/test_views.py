@@ -4,7 +4,7 @@ import sqlalchemy
 from datetime import datetime
 
 import app.service_layer
-from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work
+from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work, errors
 from app.error_handlers import HttpError
 
 
@@ -43,9 +43,7 @@ def test_create_user_with_integrity_error(test_client, clear_db_before_and_after
             ({"email": "email@test.test", "password": "test_password"}, "name"),
     )
 )
-def test_create_user_where_name_or_email_or_password_missed(
-        test_client, session_maker, engine, user_data, missed_param
-):
+def test_create_user_where_name_or_email_or_password_missed(test_client, engine, user_data, missed_param):
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     assert response.status_code == 400
     assert response.json == {'errors': f"[{{'type': 'missing', 'loc': ('{missed_param}',), 'msg': 'Field required', "
@@ -77,6 +75,39 @@ def test_create_adv(test_client, app_context, clear_db_before_and_after_test):
     assert adv_from_repo.title == adv_params["title"]
     assert adv_from_repo.description == adv_params["description"]
     assert adv_from_repo.user_id == user_id
+
+
+@pytest.mark.parametrize(
+    "adv_params,type,loc,input,msg,url", (
+            ({'description': 'test_description'}, 'missing', 'title', f"{{'description': 'test_description'}}",
+             'Field required', 'https://errors.pydantic.dev/2.9/v/missing'),
+            ({'title': 'test_title'}, 'missing', 'description', f"{{'title': 'test_title'}}", 'Field required',
+             'https://errors.pydantic.dev/2.9/v/missing'),
+            ({"title": True, "description": "test_description"}, "string_type", "title", "True",
+             "Input should be a valid string", "https://errors.pydantic.dev/2.9/v/string_type"),
+    )
+)
+def test_create_adv_returns_400_if_invalid_adv_params_passed(test_client, clear_db_before_and_after_test, app_context,
+                                                             adv_params, type, loc, input, msg, url):
+    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
+    service_layer.create_user(
+        user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+        hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
+    )
+    with app_context:
+        access_token = service_layer.jwt_auth(
+            validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
+            grant_access_func=authentication.get_access_token, credentials=user_data, uow=unit_of_work.UnitOfWork()
+        )
+    response = test_client.post(
+        "http://127.0.0.1:5000/advertisements/", json=adv_params, headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert response.status_code == 400
+    assert response.json == {"errors": f"[{{'type': '{type}',"
+                                       f" 'loc': ('{loc}',),"
+                                       f" 'msg': '{msg}',"
+                                       f" 'input': {input},"
+                                       f" 'url': '{url}'}}]"}
 
 
 @pytest.mark.run(order=12)
