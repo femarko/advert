@@ -3,7 +3,8 @@ import sqlalchemy
 
 from datetime import datetime
 
-from app import models, pass_hashing, authentication
+import app.service_layer
+from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work
 from app.error_handlers import HttpError
 
 
@@ -53,31 +54,29 @@ def test_create_user_where_name_or_email_or_password_missed(
 
 
 @pytest.mark.run(order=2)
-@pytest.mark.parametrize(
-    "adv_params, adv_id, user",
-    (
-            ({"title": "test_title_1", "description": "test_description_1"}, 1, "user_1"),
-            ({"title": "test_title_2", "description": "test_description_2"}, 2, "user_1"),
-            ({"title": "test_title_3", "description": "test_description_3"}, 3, "user_2"),
-            ({"title": "test_title_4", "description": "test_description_4"}, 4, "user_2"),
+def test_create_adv(test_client, app_context, clear_db_before_and_after_test):
+    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
+    adv_params = {"title": "test_title", "description": "test_description"}
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+        hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
     )
-)
-def test_create_adv(test_client, session_maker, engine, adv_params, user, adv_id, access_token, app_context):
     with app_context:
-        response = test_client.post("http://127.0.0.1:5000/advertisements/",
-                                    json=adv_params,
-                                    headers={"Authorization": f"Bearer {access_token[user]}"})
-        authenticated_user_id = authentication.get_authenticated_user_identity()
-    session = session_maker
-    with session() as sess:
-        sql_statement = sqlalchemy.text('SELECT * from "adv" WHERE id = :id')
-        data_from_db = sess.execute(sql_statement, dict(id=adv_id)).first()
+        access_token = service_layer.jwt_auth(
+            validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
+            grant_access_func=authentication.get_access_token, credentials=user_data, uow=unit_of_work.UnitOfWork()
+        )
+    response = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params,
+                                headers={"Authorization": f"Bearer {access_token}"})
+    uow = unit_of_work.UnitOfWork()
+    with uow:
+        adv_from_repo = uow.advs.get(instance_id=response.json["new_advertisement_id"])
     assert response.status_code == 201
-    assert response.json == {"advertisement id": adv_id}
-    assert response.json["advertisement id"] == data_from_db[0]
-    assert data_from_db[1] == adv_params["title"]
-    assert data_from_db[2] == adv_params["description"]
-    assert data_from_db[4] == authenticated_user_id
+    assert response.json == {"new_advertisement_id": adv_from_repo.id}
+    assert response.json["new_advertisement_id"] == adv_from_repo.id
+    assert adv_from_repo.title == adv_params["title"]
+    assert adv_from_repo.description == adv_params["description"]
+    assert adv_from_repo.user_id == user_id
 
 
 @pytest.mark.run(order=12)

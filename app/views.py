@@ -135,15 +135,17 @@ def get_adv_params(adv_id: int):
 @adv.route("/advertisements/", methods=["POST"])
 @jwt_required()
 def create_adv():
-    validation_result: ValidationResult = validation.validate_data(validation_model=validation.CreateAdv,
-                                                                   data=request.json)
-    validated_data = validation_result.validated_data
-    current_user_id: int = authentication.check_current_user()
-    validated_data |= {"user_id": current_user_id}
-    new_adv: models.Advertisement = \
-        service_layer.add_model_instance(model_instance=models.Advertisement(**validated_data))
-    return jsonify({'advertisement id': new_adv.id}), 201
-
+    try:
+        new_adv_id: int = service_layer.create_adv(
+            get_auth_user_id_func=authentication.get_authenticated_user_identity,
+            check_current_user_func=authentication.check_current_user,
+            validate_func=validation.validate_data_for_adv_creation, adv_params=request.json, uow=UnitOfWork()
+        )
+        return jsonify({'new_advertisement_id': new_adv_id}), 201
+    except app.errors.CurrentUserError:
+        raise HttpError(status_code=403, description="Unavailable operation.")
+    except app.errors.ValidationError as e:
+        raise HttpError(status_code=400, description=str(e))
 
 # todo: do I need this endpoint?
 # @adv.route("/advertisements/<int:adv_id>/user", methods=["GET"])
