@@ -26,6 +26,15 @@ def drop_all_create_all(engine):
 
 
 @pytest.fixture
+def clear_db_before_and_after_test(engine):
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
+    yield
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
+
+
+@pytest.fixture
 def test_client():
     return adv.test_client()
 
