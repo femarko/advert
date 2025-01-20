@@ -27,8 +27,10 @@ def test_create_user(test_client, clear_db_before_and_after_test):
     assert pass_hashing.check_password(hashed_password=user_from_repo.password, password=user_data["password"])
 
 
-def test_create_user_with_integrity_error(test_client, session_maker, engine, create_test_users_and_advs):
-    user_data = {"name": f"test_filter_1000", "email": f"test_filter_1000@email.com", "password": "password"}
+def test_create_user_with_integrity_error(test_client, clear_db_before_and_after_test):
+    user_data = {"name": "test_name", "email": "test@email.com", "password": "test_password"}
+    service_layer.create_user(user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+                              hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     assert response.status_code == 409
     assert response.json == {"errors": "A user with the provided credentials already existsts."}
