@@ -189,3 +189,10 @@ def test_get_adv(fake_users_repo, fake_advs_repo, fake_unit_of_work, fake_check_
     assert result.user_id == expected_result["user_id"]
     assert result.description == expected_result["description"]
     assert result.creation_date == expected_result["creation_date"]
+
+
+def test_get_adv_raises_not_found_error(fake_check_current_user_func, fake_advs_repo, fake_unit_of_work):
+    uow = fake_unit_of_work(advs=fake_advs_repo(advs=[]))
+    with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
+        service_layer.get_adv(adv_id=1, check_current_user_func=fake_check_current_user_func, uow=uow)
+    assert e.value.message == "The advertisement with the provided parameters is not found."
