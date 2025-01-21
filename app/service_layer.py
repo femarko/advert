@@ -57,25 +57,19 @@ def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_fu
         return user_id
 
 
-def update_user(authenticated_user_id: int,
-                check_current_user_func: Callable,
-                validate_func: Callable,
-                hash_pass_func: Callable,
-                new_data: dict[str, str],
-                uow) -> dict:
-    check_current_user_func(user_id=authenticated_user_id, get_cuid=False)
+def update_user(authenticated_user_id: int, check_current_user_func: Callable, validate_func: Callable,
+                hash_pass_func: Callable, new_data: dict[str, str], uow) -> dict:
+    curent_user_id: int = check_current_user_func(user_id=authenticated_user_id)
     validated_data: dict[str, str] = validate_func(**new_data)
     if validated_data.get("password"):
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
-        fetched_user: User = uow.users.get(authenticated_user_id)
-        if not fetched_user:
-            raise app.errors.NotFoundError
+        curent_user: User = uow.users.get(instance_id=curent_user_id)
         for attr_name, attr_value in validated_data.items():
-            setattr(fetched_user, attr_name, attr_value)
-        uow.users.add(fetched_user)
+            setattr(curent_user, attr_name, attr_value)
+        uow.users.add(curent_user)
         uow.commit()
-        return fetched_user.get_params()
+        return curent_user.get_params()
 
 
 def get_related_advs(authenticated_user_id: int,
@@ -216,6 +210,6 @@ def jwt_auth(validate_func: Callable,
         if check_pass_func(password=validated_data["password"], hashed_password=user.password):
             access_token: str = grant_access_func(identity=user.id)
             return access_token
-        raise app.errors.AccessDeniedError(f"Invalid credentials.")
+        raise app.errors.AccessDeniedError
     except IndexError:
-        raise app.errors.AccessDeniedError(f"Invalid credentials.")
+        raise app.errors.AccessDeniedError
