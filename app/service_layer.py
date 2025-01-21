@@ -136,7 +136,7 @@ def get_adv(adv_id: int, check_current_user_func: Callable, uow) -> Advertisemen
     with uow:
         adv: Advertisement = uow.advs.get(instance_id=adv_id)
         if not adv:
-            raise app.errors.NotFoundError(message_prefix="Advertisement")
+            raise app.errors.NotFoundError(message_prefix="The advertisement")
         user_id: int = adv.user_id
     check_current_user_func(user_id)
     return adv
