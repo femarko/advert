@@ -3,7 +3,7 @@ from typing import Optional
 
 class NotFoundError(Exception):
     def __init__(self, message_prefix: Optional[str] = ""):
-        self.base_message = " is not found."
+        self.base_message = " with the provided parameters is not found."
         self.message = message_prefix + self.base_message
 
 
