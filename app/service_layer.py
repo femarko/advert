@@ -132,14 +132,12 @@ def get_user_by_id(user_id: int, uow):
     return user_instance
 
 
-def get_adv(column: AdvertisementColumns, column_value: str | int | datetime, session):
-    results: FilterResult = filter_and_return_list(session=session,
-                                                   model_class=Advertisement,
-                                                   filter_type=FilterTypes.COLUMN_VALUE,
-                                                   comparison=Comparison.IS,
-                                                   column=column,
-                                                   column_value=column_value)
-    return results
+def get_adv(adv_id: int, check_current_user_func: Callable, uow) -> Advertisement:
+    with uow:
+        adv: Advertisement = uow.advs.get(instance_id=adv_id)
+        user_id: int = adv.user_id
+    check_current_user_func(user_id)
+    return adv
 
 
 def search_advs_by_text(column: AdvertisementColumns,
