@@ -110,6 +110,16 @@ def test_create_adv_returns_400_if_invalid_adv_params_passed(test_client, clear_
                                        f" 'url': '{url}'}}]"}
 
 
+def test_create_adv_returns_401_when_user_is_not_authenticated(test_client, clear_db_before_and_after_test):
+    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
+    adv_params = {"title": "test_title", "description": "test_description"}
+    service_layer.create_user(user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+                              hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
+    response = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params,)
+    assert response.status_code == 401
+    assert response.json == {"msg": "Missing Authorization Header"}
+
+
 @pytest.mark.run(order=12)
 def test_get_user_data(test_client, access_token, test_date):
     response = test_client.get(
@@ -163,13 +173,12 @@ def test_update_user_with_correct_input_data(test_client, session_maker, access_
 
 
 @pytest.mark.run(order=15)
-def test_update_user_with_incorrect_input_data(test_client, session_maker, access_token):
+def test_update_user_with_incorrect_input_data(test_client, access_token):
     new_data = {"name": "new_name"}
-    response = test_client.patch("http://127.0.0.1:5000/users/10/",
-                                 json=new_data,
+    response = test_client.patch("http://127.0.0.1:5000/users/10/", json=new_data,
                                  headers={"Authorization": f"Bearer {access_token['user_1000']}"})
     assert response.status_code == 403
-    assert response.json == {"errors": "Forbidden action."}
+    assert response.json == {"errors": "Unavailable operation."}
 
 
 def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, test_date):
