@@ -57,9 +57,9 @@ def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_fu
         return user_id
 
 
-def update_user(authenticated_user_id: int, check_current_user_func: Callable, validate_func: Callable,
+def update_user(user_id: int, check_current_user_func: Callable, validate_func: Callable,
                 hash_pass_func: Callable, new_data: dict[str, str], uow) -> dict:
-    curent_user_id: int = check_current_user_func(user_id=authenticated_user_id)
+    curent_user_id: int = check_current_user_func(user_id=user_id)
     validated_data: dict[str, str] = validate_func(**new_data)
     if validated_data.get("password"):
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
