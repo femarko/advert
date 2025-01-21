@@ -1,5 +1,10 @@
+from typing import Optional
+
+
 class NotFoundError(Exception):
-    message = "is not found."
+    def __init__(self, message_prefix: Optional[str] = ""):
+        self.base_message = " is not found."
+        self.message = message_prefix + self.base_message
 
 
 class ValidationError(Exception):
@@ -7,7 +12,8 @@ class ValidationError(Exception):
 
 
 class AccessDeniedError(Exception):
-    message = "Invalid credentials."
+    def __init__(self, message: Optional[str] = "Invalid credentials."):
+        self.message = message
 
 
 class FailedToGetResultError(Exception):
@@ -15,8 +21,11 @@ class FailedToGetResultError(Exception):
 
 
 class CurrentUserError(Exception):
-    message = "Unavailable operation."
+    def __init__(self, message: Optional[str] = "Unavailable operation."):
+        self.message = message
 
 
 class AlreadyExistsError(Exception):
-    message = "with the provided params already existsts."
+    def __init__(self, message_prefix: Optional[str] = ""):
+        self.base_message = "with the provided params already existsts."
+        self.message = message_prefix + self.base_message
