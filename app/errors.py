@@ -1,5 +1,5 @@
 class NotFoundError(Exception):
-    pass
+    message = "is not found."
 
 
 class ValidationError(Exception):
@@ -7,7 +7,7 @@ class ValidationError(Exception):
 
 
 class AccessDeniedError(Exception):
-    pass
+    message = "Invalid credentials."
 
 
 class FailedToGetResultError(Exception):
@@ -15,8 +15,8 @@ class FailedToGetResultError(Exception):
 
 
 class CurrentUserError(Exception):
-    pass
+    message = "Unavailable operation."
 
 
 class AlreadyExistsError(Exception):
-    pass
+    message = "with the provided params already existsts."

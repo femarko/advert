@@ -43,8 +43,8 @@ def get_user_data(user_id: int) -> tuple[Response, int]:
             user_id=user_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
         )
         return jsonify(user_data), 200
-    except app.errors.CurrentUserError:
-        raise HttpError(status_code=403, description="Unavailable operation.")
+    except app.errors.CurrentUserError as e:
+        raise HttpError(status_code=403, description=e.message)
     except app.errors.NotFoundError:
         raise HttpError(status_code=404, description=f"User is not found.")
 
@@ -53,15 +53,14 @@ def get_user_data(user_id: int) -> tuple[Response, int]:
 def create_user():
     try:
         new_user_id: int = service_layer.create_user(
-            user_data=request.json,
-            validate_func=validation.validate_data_for_user_creation,
-            hash_pass_func=pass_hashing.hash_password,
-            uow=UnitOfWork())
+            user_data=request.json, validate_func=validation.validate_data_for_user_creation,
+            hash_pass_func=pass_hashing.hash_password, uow=UnitOfWork()
+        )
         return jsonify({"user_id": new_user_id}), 201
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-    except app.errors.AlreadyExistsError:
-        raise HttpError(status_code=409, description="A user with the provided credentials already existsts.")
+    except app.errors.AlreadyExistsError as e:
+        raise HttpError(status_code=409, description=f"A user {e.message}")
 
 
 @adv.route("/users/<int:user_id>/", methods=["PATCH"])
@@ -69,16 +68,13 @@ def create_user():
 def update_user(user_id: int):
     try:
         updated_user_data: dict = service_layer.update_user(
-            authenticated_user_id=user_id,
-            check_current_user_func=authentication.check_current_user,
-            validate_func=validation.validate_data_for_user_updating,
-            hash_pass_func=pass_hashing.hash_password,
-            new_data=request.json,
-            uow=UnitOfWork()
+            authenticated_user_id=user_id, check_current_user_func=authentication.check_current_user,
+            validate_func=validation.validate_data_for_user_updating, hash_pass_func=pass_hashing.hash_password,
+            new_data=request.json, uow=UnitOfWork()
         )
         return jsonify({"modified_data": updated_user_data}), 200
-    except app.errors.CurrentUserError:
-        raise HttpError(status_code=403, description="Forbidden action.")
+    except app.errors.CurrentUserError as e:
+        raise HttpError(status_code=403, description=e.message)
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
     except app.errors.NotFoundError:
@@ -142,8 +138,8 @@ def create_adv():
             validate_func=validation.validate_data_for_adv_creation, adv_params=request.json, uow=UnitOfWork()
         )
         return jsonify({'new_advertisement_id': new_adv_id}), 201
-    except app.errors.CurrentUserError:
-        raise HttpError(status_code=403, description="Unavailable operation.")
+    except app.errors.CurrentUserError as e:
+        raise HttpError(status_code=403, description=e.message)
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
 
