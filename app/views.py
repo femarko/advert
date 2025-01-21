@@ -68,7 +68,7 @@ def create_user():
 def update_user(user_id: int):
     try:
         updated_user_data: dict = service_layer.update_user(
-            authenticated_user_id=user_id, check_current_user_func=authentication.check_current_user,
+            user_id=user_id, check_current_user_func=authentication.check_current_user,
             validate_func=validation.validate_data_for_user_updating, hash_pass_func=pass_hashing.hash_password,
             new_data=request.json, uow=UnitOfWork()
         )
@@ -77,8 +77,6 @@ def update_user(user_id: int):
         raise HttpError(status_code=403, description=e.message)
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-    except app.errors.NotFoundError:
-        raise HttpError(status_code=404, description=f"User is not found.")
 
 
 @adv.route("/users/<int:user_id>/advertisements", methods=["GET"])
