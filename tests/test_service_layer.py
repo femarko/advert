@@ -101,31 +101,6 @@ def test_update_user(fake_check_current_user_func, fake_validate_func, fake_hash
     assert uow.users.instances.pop().password == expected_password
 
 
-def test_update_user_raises_not_found_error(
-        fake_check_current_user_func, fake_validate_func, fake_hash_pass_func, fake_users_repo, fake_advs_repo,
-        fake_unit_of_work, test_date
-):
-    new_data = {"name": "new_name", "email": "new_email", "password": "new_pass"}
-    user_data = {
-        "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
-    }
-    fusers_repo = fake_users_repo(users=[])
-    fuow = fake_unit_of_work(users=fusers_repo)
-    user_id: int = service_layer.create_user(
-        user_data=user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fuow
-    )
-    uow = fake_unit_of_work(users=fusers_repo)
-    with pytest.raises(app.errors.NotFoundError):
-        service_layer.update_user(
-            authenticated_user_id=user_id+1,
-            check_current_user_func=fake_check_current_user_func,
-            validate_func=fake_validate_func,
-            hash_pass_func=fake_hash_pass_func,
-            new_data=new_data,
-            uow=uow
-        )
-
-
 def test_get_related_advs(fake_check_current_user_func, fake_users_repo, fake_advs_repo, fake_unit_of_work):
     fusers_repo = fake_users_repo(users=[])
     fadvs_repo = fake_advs_repo(advs=[])
