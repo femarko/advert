@@ -90,7 +90,7 @@ def test_update_user(fake_check_current_user_func, fake_validate_func, fake_hash
     expected_result = {"id": user_id, "creation_date": test_date.isoformat(), **new_data}
     expected_password = expected_result.pop("password")
     result = service_layer.update_user(
-        authenticated_user_id=user_id,
+        user_id=user_id,
         check_current_user_func=fake_check_current_user_func,
         validate_func=fake_validate_func,
         hash_pass_func=fake_hash_pass_func,
