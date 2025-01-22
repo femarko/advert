@@ -3,8 +3,10 @@ import sqlalchemy
 
 from datetime import datetime
 
+from flask_jwt_extended import verify_jwt_in_request
+
 import app.service_layer
-from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work, errors
+from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work, errors, services
 from app.error_handlers import HttpError
 
 
@@ -59,14 +61,15 @@ def test_create_adv(test_client, app_context, clear_db_before_and_after_test):
         user_data=user_data, validate_func=validation.validate_data_for_user_creation,
         hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
     )
+    uow = unit_of_work.UnitOfWork()
     with app_context:
         access_token = service_layer.jwt_auth(
             validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
-            grant_access_func=authentication.get_access_token, credentials=user_data, uow=unit_of_work.UnitOfWork()
+            grant_access_func=authentication.get_access_token, credentials=user_data, uow=uow
         )
-    response = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params,
-                                headers={"Authorization": f"Bearer {access_token}"})
-    uow = unit_of_work.UnitOfWork()
+    response = test_client.post(
+        "http://127.0.0.1:5000/advertisements/", json=adv_params, headers={"Authorization": f"Bearer {access_token}"}
+    )
     with uow:
         adv_from_repo = uow.advs.get(instance_id=response.json["new_advertisement_id"])
     assert response.status_code == 201
@@ -141,18 +144,33 @@ def test_get_user_data_by_other_user(test_client, access_token, test_date):
 
 
 @pytest.mark.run(order=13)
-def test_get_adv_params(test_client, session_maker, access_token):
-    response = test_client.get("http://127.0.0.1:5000/advertisements/1/",
-                               headers={"Authorization": f"Bearer {access_token['user_1']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1')).first()
+def test_get_adv_params(test_client, clear_db_before_and_after_test, app_context, fake_get_auth_user_id_func):
+    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
+    user_id: int = service_layer.create_user(
+        user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+        hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
+    )
+    adv_params = {"title": "test_title", "description": "test_description", "user_id": user_id}
+    adv = services.create_adv(**adv_params)
+    uow = unit_of_work.UnitOfWork()
+    with uow:
+        uow.advs.add(instance=adv)
+        uow.commit()
+        with app_context:
+            access_token = service_layer.jwt_auth(
+                validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
+                grant_access_func=authentication.get_access_token, credentials=user_data, uow=uow
+            )
+        expected = uow.advs.get(instance_id=1)
+    response = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
     assert response.status_code == 200
-    assert response.json == {"id": data_from_db[0],
-                             "title": data_from_db[1],
-                             "description": data_from_db[2],
-                             "creation_date": data_from_db[3].isoformat(),
-                             "user_id": data_from_db[4]}
+    assert response.json == {"id": expected.id,
+                             "title": expected.title,
+                             "description": expected.description,
+                             "creation_date": expected.creation_date.isoformat(),
+                             "user_id": expected.user_id}
 
 
 @pytest.mark.run(order=14)

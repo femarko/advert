@@ -114,16 +114,15 @@ def delete_user(user_id: int):
 @adv.route("/advertisements/<int:adv_id>/", methods=["GET"])
 @jwt_required()
 def get_adv_params(adv_id: int):
-    filter_result: FilterResult = service_layer.get_adv(
-        column="id", column_value=adv_id, session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.result:
-            adv_instance: Advertisement = filter_result.result[0]
-            authentication.check_current_user(user_id=adv_instance.user_id, get_cuid=False)
-            return jsonify(adv_instance.get_params()), 200
-        raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    try:
+        adv: Advertisement = service_layer.get_adv(
+            adv_id=adv_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
+        )
+    except app.errors.CurrentUserError as e:
+        raise HttpError(status_code=403, description=e.message)
+    except app.errors.NotFoundError as e:
+        raise HttpError(status_code=404, description=e.message)
+    return adv.get_params(), 200
 
 
 @adv.route("/advertisements/", methods=["POST"])
