@@ -15,7 +15,7 @@ def update_user(user: User, new_attrs: dict) -> User:
     return user
 
 
-def get_params(model: User | Advertisement):
+def get_params(model: User | Advertisement) -> dict[str, str | int]:
     if isinstance(model, User):
         params = {"id": model.id, "name": model.name, "email": model.email,
                   "creation_date": model.creation_date.isoformat()}
