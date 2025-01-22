@@ -8,6 +8,7 @@ from flask_jwt_extended import verify_jwt_in_request
 import app.service_layer
 from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work, errors, services
 from app.error_handlers import HttpError
+from app.models import User, Advertisement
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -171,6 +172,58 @@ def test_get_adv_params(test_client, clear_db_before_and_after_test, app_context
                              "description": expected.description,
                              "creation_date": expected.creation_date.isoformat(),
                              "user_id": expected.user_id}
+
+
+def test_get_adv_params_returns_403_when_current_user_id_does_not_match_user_id_of_the_adv(
+        clear_db_before_and_after_test, app_context, test_client
+):
+    password_1 = "test_pass_1"
+    password_2 = "test_pass_2"
+    user_data_1 = {"name": "test_name_1", "email": "test_email_1", "password": pass_hashing.hash_password(password_1)}
+    user_data_2 = {"name": "test_name_2", "email": "test_email_2", "password": pass_hashing.hash_password(password_2)}
+    adv_params = {"user_id": 2, "title": "test_title", "description": "test_description"}
+    user_1: User = services.create_user(**user_data_1)
+    user_2: User = services.create_user(**user_data_2)
+    adv: Advertisement = services.create_adv(**adv_params)
+    uow = unit_of_work.UnitOfWork()
+    with uow:
+        uow.users.add(instance=user_1)
+        uow.users.add(instance=user_2)
+        uow.advs.add(instance=adv)
+        uow.commit()
+    with app_context:
+        access_token = service_layer.jwt_auth(
+            validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
+            grant_access_func=authentication.get_access_token,
+            credentials={"email": user_data_1["email"], "password": password_1}, uow=uow
+        )
+    response = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert response.status_code == 403
+    assert response.json == {"errors": "Unavailable operation."}
+
+
+def test_get_adv_params_returns_404_when_adv_is_not_found(clear_db_before_and_after_test, test_client, app_context):
+    password = "test_pass_1"
+    user_data = {"name": "test_name_1", "email": "test_email_1", "password": pass_hashing.hash_password(password)}
+    user: User = services.create_user(**user_data)
+    uow = unit_of_work.UnitOfWork()
+    with uow:
+        uow.users.add(instance=user)
+        uow.commit()
+    with app_context:
+        access_token = service_layer.jwt_auth(
+            validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
+            grant_access_func=authentication.get_access_token,
+            credentials={"email": user_data["email"], "password": password}, uow=uow
+        )
+    response = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert response.status_code == 404
+    assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
+
 
 
 @pytest.mark.run(order=14)

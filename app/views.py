@@ -115,14 +115,14 @@ def delete_user(user_id: int):
 @jwt_required()
 def get_adv_params(adv_id: int):
     try:
-        adv: Advertisement = service_layer.get_adv(
+        adv_params: dict[str, str | int] = service_layer.get_adv_params(
             adv_id=adv_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
         )
+        return adv_params, 200
     except app.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
     except app.errors.NotFoundError as e:
         raise HttpError(status_code=404, description=e.message)
-    return adv.get_params(), 200
 
 
 @adv.route("/advertisements/", methods=["POST"])
