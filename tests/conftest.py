@@ -126,14 +126,14 @@ def create_test_users_and_advs(session_maker, test_date):
         sess.commit()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_get_auth_user_id_func():
     def foo():
         return 1
     return foo
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_check_current_user_func():
     def foo(user_id: int, get_cuid: bool = True):
         return user_id
@@ -141,7 +141,7 @@ def fake_check_current_user_func():
     return foo
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_validate_func():
     def foo(**data):
         return data
@@ -149,7 +149,7 @@ def fake_validate_func():
     return foo
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_hash_pass_func():
     def foo(password: str):
         return password
@@ -157,17 +157,17 @@ def fake_hash_pass_func():
     return foo
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_users_repo():
     return FakeUsersRepo
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_advs_repo():
     return FakeAdvsRepo
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def fake_unit_of_work():
     return FakeUnitOfWork
 
