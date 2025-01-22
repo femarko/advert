@@ -3,7 +3,7 @@ import datetime
 import sqlalchemy, pytest
 
 import app.errors
-from app import pass_hashing, authentication, unit_of_work, validation, models
+from app import pass_hashing, authentication, unit_of_work, validation, models, services
 import app.authentication
 from app import service_layer
 
@@ -168,8 +168,10 @@ def test_create_adv(fake_get_auth_user_id_func, fake_validate_func, fake_hash_pa
     assert data_from_repo.user_id == user_id
 
 
-def test_get_adv(fake_users_repo, fake_advs_repo, fake_unit_of_work, fake_check_current_user_func, fake_validate_func,
-                 fake_hash_pass_func, fake_get_auth_user_id_func, test_date):
+def test_get_adv_params(
+        fake_users_repo, fake_advs_repo, fake_unit_of_work, fake_check_current_user_func, fake_validate_func,
+        fake_hash_pass_func, fake_get_auth_user_id_func, test_date
+):
     user_data = {"id": 1, "name": "test_name", "email": "test_email@test.com", "password": "test_pass"}
     fusers_repo, fadvs_repo = fake_users_repo(users=[]), fake_advs_repo(advs=[])
     fuow = fake_unit_of_work(users=fusers_repo, advs=fadvs_repo)
@@ -182,17 +184,17 @@ def test_get_adv(fake_users_repo, fake_advs_repo, fake_unit_of_work, fake_check_
         get_auth_user_id_func=fake_get_auth_user_id_func, adv_params=adv_params, validate_func=fake_validate_func,
         check_current_user_func=fake_check_current_user_func, uow=fuow2
     )
-    result = service_layer.get_adv(adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=fuow2)
+    result = service_layer.get_adv_params(adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=fuow2)
     expected_result = {"id": adv_id, "user_id": user_id, **adv_params}
-    assert result.id == expected_result["id"]
-    assert result.title == expected_result["title"]
-    assert result.user_id == expected_result["user_id"]
-    assert result.description == expected_result["description"]
-    assert result.creation_date == expected_result["creation_date"]
+    assert result["id"] == expected_result["id"]
+    assert result["title"] == expected_result["title"]
+    assert result["user_id"] == expected_result["user_id"]
+    assert result["description"] == expected_result["description"]
+    assert result["creation_date"] == expected_result["creation_date"].isoformat()
 
 
-def test_get_adv_raises_not_found_error(fake_check_current_user_func, fake_advs_repo, fake_unit_of_work):
+def test_get_adv_params_raises_not_found_error(fake_check_current_user_func, fake_advs_repo, fake_unit_of_work):
     uow = fake_unit_of_work(advs=fake_advs_repo(advs=[]))
     with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
-        service_layer.get_adv(adv_id=1, check_current_user_func=fake_check_current_user_func, uow=uow)
+        service_layer.get_adv_params(adv_id=1, check_current_user_func=fake_check_current_user_func, uow=uow)
     assert e.value.message == "The advertisement with the provided parameters is not found."
