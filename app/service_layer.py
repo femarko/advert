@@ -132,14 +132,14 @@ def get_user_by_id(user_id: int, uow):
     return user_instance
 
 
-def get_adv(adv_id: int, check_current_user_func: Callable, uow) -> Advertisement:
+def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
     with uow:
         adv: Advertisement = uow.advs.get(instance_id=adv_id)
-        if not adv:
-            raise app.errors.NotFoundError(message_prefix="The advertisement")
-        user_id: int = adv.user_id
-    check_current_user_func(user_id)
-    return adv
+    try:
+        check_current_user_func(user_id=adv.user_id)
+        return services.get_params(model=adv)
+    except AttributeError:
+        raise app.errors.NotFoundError(message_prefix="The advertisement")
 
 
 def search_advs_by_text(column: AdvertisementColumns,
