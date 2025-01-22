@@ -5,7 +5,7 @@ from flask import request, Response
 from sqlalchemy.exc import IntegrityError
 
 import app.authentication
-from app import models, adv, validation, pass_hashing
+from app import models, adv, validation, pass_hashing, services
 from app.error_handlers import HttpError
 from app.errors import NotFoundError, ValidationError, AccessDeniedError, FailedToGetResultError, CurrentUserError, \
     AlreadyExistsError
@@ -43,17 +43,17 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     current_user_id: int = check_current_user_func(user_id=user_id, get_cuid=True)
     with uow:
         user = uow.users.get(current_user_id)
-    return user.get_params()
+    return services.get_params(model=user)
 
 
 def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
     validated_data = validate_func(**user_data)
     validated_data["password"] = hash_pass_func(password=validated_data["password"])
-    user = User(**validated_data)
+    user = services.create_user(**validated_data)
     with uow:
         uow.users.add(user)
         uow.commit()
-        user_id: int = user.get_params()["id"]
+        user_id: int = user.id
         return user_id
 
 
@@ -65,11 +65,11 @@ def update_user(user_id: int, check_current_user_func: Callable, validate_func: 
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
         curent_user: User = uow.users.get(instance_id=curent_user_id)
-        for attr_name, attr_value in validated_data.items():
-            setattr(curent_user, attr_name, attr_value)
-        uow.users.add(curent_user)
+        updated_user = services.update_user(user=curent_user, new_attrs=validated_data)
+        uow.users.add(updated_user)
         uow.commit()
-        return curent_user.get_params()
+        updated_user_params = services.get_params(model=updated_user)
+        return updated_user_params
 
 
 def get_related_advs(authenticated_user_id: int,
@@ -96,7 +96,7 @@ def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[st
         user_to_delete: User = uow.users.get(current_user_id)
         if not user_to_delete:
             raise app.errors.NotFoundError
-        deleted_user_params: dict[str, str | int] = user_to_delete.get_params()
+        deleted_user_params: dict[str, str | int] = services.get_params(model=user_to_delete)
         uow.users.delete(user_to_delete)
         uow.commit()
     return deleted_user_params
@@ -104,11 +104,11 @@ def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[st
 
 def create_adv(get_auth_user_id_func: Callable, check_current_user_func: Callable, validate_func: Callable,
                adv_params: dict[str, str | int], uow):
-    authenticated_user_id: int = get_auth_user_id_func()
+    authenticated_user_id: int = get_auth_user_id_func()  # todo: "authenticated_user_id" must be right in the signature
     current_user_id: int = check_current_user_func(user_id=authenticated_user_id)
     validated_data = validate_func(**adv_params)
     validated_data |= {"user_id": current_user_id}
-    adv = Advertisement(**validated_data)
+    adv = services.create_adv(**validated_data)
     with uow:
         uow.advs.add(adv)
         uow.commit()
