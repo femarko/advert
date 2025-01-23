@@ -9,10 +9,10 @@ def create_adv(**adv_params) -> Advertisement:
     return Advertisement(**adv_params)
 
 
-def update_user(user: User, new_attrs: dict) -> User:
+def update_instance(instance: User | Advertisement, new_attrs: dict) -> User | Advertisement:
     for attr, value in new_attrs.items():
-        setattr(user, attr, value)
-    return user
+        setattr(instance, attr, value)
+    return instance
 
 
 def get_params(model: User | Advertisement) -> dict[str, str | int]:

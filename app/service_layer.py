@@ -64,8 +64,8 @@ def update_user(user_id: int, check_current_user_func: Callable, validate_func: 
     if validated_data.get("password"):
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
-        curent_user: User = uow.users.get(instance_id=curent_user_id)
-        updated_user = services.update_user(user=curent_user, new_attrs=validated_data)
+        current_user: User = uow.users.get(instance_id=curent_user_id)
+        updated_user = services.update_instance(instance=current_user, new_attrs=validated_data)
         uow.users.add(updated_user)
         uow.commit()
         updated_user_params = services.get_params(model=updated_user)
