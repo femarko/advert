@@ -131,7 +131,6 @@ def create_adv():
     try:
         new_adv_id: int = service_layer.create_adv(
             get_auth_user_id_func=authentication.get_authenticated_user_identity,
-            check_current_user_func=authentication.check_current_user,
             validate_func=validation.validate_data_for_adv_creation, adv_params=request.json, uow=UnitOfWork()
         )
         return jsonify({'new_advertisement_id': new_adv_id}), 201

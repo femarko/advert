@@ -54,10 +54,21 @@ def test_create_user_where_name_or_email_or_password_missed(test_client, engine,
                                        f"'url': 'https://errors.pydantic.dev/2.9/v/missing'}}]"}
 
 
-@pytest.mark.run(order=2)
-def test_create_adv(test_client, app_context, clear_db_before_and_after_test):
+@pytest.mark.parametrize(
+    "adv_params,extra_params", (
+            (
+                    {"title": "test_title", "description": "test_description"}, dict()
+            ),
+            (
+                    {"title": "test_title", "description": "test_description"},
+                    {"user_id": 5000, "id": 100, "creation_date": datetime(year=2030, month=1, day=1)}
+            ),
+    )
+)
+def test_create_adv_returns_201_and_ignores_extra_params(
+        test_client, app_context, clear_db_before_and_after_test, adv_params, extra_params
+):
     user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-    adv_params = {"title": "test_title", "description": "test_description"}
     user_id: int = service_layer.create_user(
         user_data=user_data, validate_func=validation.validate_data_for_user_creation,
         hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
@@ -69,16 +80,19 @@ def test_create_adv(test_client, app_context, clear_db_before_and_after_test):
             grant_access_func=authentication.get_access_token, credentials=user_data, uow=uow
         )
     response = test_client.post(
-        "http://127.0.0.1:5000/advertisements/", json=adv_params, headers={"Authorization": f"Bearer {access_token}"}
+        "http://127.0.0.1:5000/advertisements/", headers={"Authorization": f"Bearer {access_token}"},
+        json={**adv_params, **extra_params}
     )
     with uow:
         adv_from_repo = uow.advs.get(instance_id=response.json["new_advertisement_id"])
     assert response.status_code == 201
     assert response.json == {"new_advertisement_id": adv_from_repo.id}
-    assert response.json["new_advertisement_id"] == adv_from_repo.id
     assert adv_from_repo.title == adv_params["title"]
     assert adv_from_repo.description == adv_params["description"]
     assert adv_from_repo.user_id == user_id
+    assert adv_from_repo.id != extra_params.get("id")
+    assert adv_from_repo.user_id != extra_params.get("user_id")
+    assert adv_from_repo.creation_date != extra_params.get("creation_date")
 
 
 @pytest.mark.parametrize(

@@ -144,7 +144,7 @@ def test_delete_user_raises_not_found_error(fake_users_repo, fake_unit_of_work, 
 
 
 def test_create_adv(fake_get_auth_user_id_func, fake_validate_func, fake_hash_pass_func, fake_users_repo,
-                    fake_advs_repo, fake_unit_of_work, test_date, fake_check_current_user_func):
+                    fake_advs_repo, fake_unit_of_work, test_date):
     user_data = {"id": 1, "name": "test_name", "email": "test_email@test.com", "password": "test_pass",
                  "creation_date": test_date}
     fusers_repo, fadvs_repo = fake_users_repo(users=[]), fake_advs_repo(advs=[])
@@ -154,10 +154,8 @@ def test_create_adv(fake_get_auth_user_id_func, fake_validate_func, fake_hash_pa
     )
     adv_params = {"title": "test_title", "description": "test_description"}
     fuow2 = fake_unit_of_work(advs=fake_advs_repo([]))
-    result = service_layer.create_adv(
-        get_auth_user_id_func=fake_get_auth_user_id_func, adv_params=adv_params, validate_func=fake_validate_func,
-        check_current_user_func=fake_check_current_user_func, uow=fuow2
-    )
+    result = service_layer.create_adv(get_auth_user_id_func=fake_get_auth_user_id_func, adv_params=adv_params,
+                                      validate_func=fake_validate_func, uow=fuow2)
     data_from_repo = fuow2.advs.get(instance_id=result)
     assert isinstance(result, int)
     assert 0 <= result <= 9
@@ -182,7 +180,7 @@ def test_get_adv_params(
     fuow2 = fake_unit_of_work(advs=fake_advs_repo([]))
     adv_id = service_layer.create_adv(
         get_auth_user_id_func=fake_get_auth_user_id_func, adv_params=adv_params, validate_func=fake_validate_func,
-        check_current_user_func=fake_check_current_user_func, uow=fuow2
+        uow=fuow2
     )
     result = service_layer.get_adv_params(adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=fuow2)
     expected_result = {"id": adv_id, "user_id": user_id, **adv_params}
