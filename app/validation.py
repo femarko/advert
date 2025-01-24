@@ -27,7 +27,6 @@ class CreateAdv(pydantic.BaseModel):
 class EditAdv(pydantic.BaseModel):
     title: str | None = None
     description: str | None = None
-    user_id: int | None = None
 
 
 class Login(pydantic.BaseModel):
