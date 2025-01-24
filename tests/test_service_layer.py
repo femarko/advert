@@ -209,7 +209,8 @@ def test_update_adv(
         uow=uow
     )
     result: dict[str, str | int] = service_layer.update_adv(
-        adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func, uow=uow
+        adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func,
+        validate_func=fake_validate_func, uow=uow
     )
     adv_from_repo_params: dict[str, str | int] = service_layer.get_adv_params(
         adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=uow
@@ -231,5 +232,6 @@ def test_update_adv_raises_not_found_error(
     adv_id, new_params = adv_id + 1, {"title": "new_title"}
     with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
         service_layer.update_adv(
-            adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func, uow=uow
+            adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func,
+            validate_func=fake_validate_func, uow=uow
         )
