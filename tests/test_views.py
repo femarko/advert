@@ -490,6 +490,21 @@ def test_update_adv_returns_400_when_invalid_new_adv_params_passed(
     }
 
 
+def test_update_adv_returns_403_when_current_user_check_fails(
+        clear_db_before_and_after_test, test_client, create_adv_through_http, access_token, test_adv_id
+):
+    new_adv_params = {"title": "new_title"}
+    other_user_data = {"name": "other_name", "email": "other_email", "password": "other_pass"}
+    test_client.post("http://127.0.0.1:5000/users/", json=other_user_data)
+    other_user_access_token = \
+        test_client.post("http://127.0.0.1:5000/login/", json=other_user_data).json.get("access_token")
+    response = test_client.patch(
+        f"http://127.0.0.1:5000/advertisements/{test_adv_id}/", json=new_adv_params,
+        headers={"Authorization": f"Bearer {other_user_access_token}"}
+    )
+    assert response.status_code == 403
+    assert response.json == {"errors": "Unavailable operation."}
+
 
 
 
