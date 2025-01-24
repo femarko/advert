@@ -7,7 +7,6 @@ import sqlalchemy
 
 import app.pass_hashing, app.errors
 from app import adv, models
-from app.models import ModelClass
 
 
 @pytest.fixture(scope="session")
@@ -182,9 +181,9 @@ class FakeBaseRepo:
     def add(self, instance):
         self.temp_added.append(instance)
 
-    def get(self, instance_id) -> ModelClass | None:
+    def get(self, instance_id):
         if instance_id not in (instance.id for instance in self.instances):
-            return
+            return []
         return next(instance for instance in self.instances if instance.id == instance_id)
 
     def get_list_or_paginated_data(self, **kwargs):
@@ -196,7 +195,7 @@ class FakeBaseRepo:
     def execute_adding(self):
         for item in self.temp_added:
             if not item.id:
-                item.id = random.randint(1, 9)
+                item.id = random.randint(0, 9)
             if not item.creation_date:
                 item.creation_date = datetime.datetime(1900, 1, 1)
             self.instances.add(item)
