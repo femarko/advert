@@ -124,7 +124,7 @@ def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user
         user_id=user_id, check_current_user_func=fake_check_current_user_func, uow=fuow
     )
     users_after_deletion = fusers_repo.get(instance_id=user_id)
-    assert users_after_deletion is None
+    assert users_after_deletion == []
     assert deleted_user_params == user_before_deletion.get_params()
 
 
