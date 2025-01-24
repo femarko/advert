@@ -45,17 +45,17 @@ def app_context():
     return adv.app_context()
 
 
-@pytest.fixture
-def access_token(session_maker, app_context, test_client, create_test_users_and_advs) -> dict[str, str]:
-    access_token_dict = {}
-    for i in range(1000, 1002):
-        login_response = test_client.post(
-            "http://127.0.0.1:5000/login/", json={"email": f"test_filter_{i}@email.com",
-                                                  "password": f"test_filter_{i}_pass"}
-        )
-        login_response_json = login_response.json
-        access_token_dict[f"user_{i}"] = login_response_json.get("access_token")
-    return access_token_dict
+# @pytest.fixture
+# def access_token(session_maker, app_context, test_client, create_test_users_and_advs) -> dict[str, str]:
+#     access_token_dict = {}
+#     for i in range(1000, 1002):
+#         login_response = test_client.post(
+#             "http://127.0.0.1:5000/login/", json={"email": f"test_filter_{i}@email.com",
+#                                                   "password": f"test_filter_{i}_pass"}
+#         )
+#         login_response_json = login_response.json
+#         access_token_dict[f"user_{i}"] = login_response_json.get("access_token")
+#     return access_token_dict
 
 
 @pytest.fixture

@@ -40,7 +40,7 @@ def test_user_id() -> Literal[1]:
 
 
 @pytest.fixture
-def log_in_through_http(test_client, create_user_through_http, app_context, test_user_data):
+def access_token(test_client, create_user_through_http, app_context, test_user_data):
     with app_context:
         response = test_client.post("http://127.0.0.1:5000/login/", json=test_user_data)
         access_token = response.json.get("access_token")
@@ -48,9 +48,9 @@ def log_in_through_http(test_client, create_user_through_http, app_context, test
 
 
 @pytest.fixture
-def create_adv_through_http(test_adv_params, test_user_id, test_client, log_in_through_http) -> int:
+def create_adv_through_http(test_adv_params, test_user_id, test_client, access_token) -> int:
     response = test_client.post("http://127.0.0.1:5000/advertisements/", json=test_adv_params,
-                                    headers={"Authorization": f"Bearer {log_in_through_http}"})
+                                headers={"Authorization": f"Bearer {access_token}"})
     adv_id: int = response.json.get("new_advertisement_id")
     return adv_id
 
@@ -440,10 +440,10 @@ def test_search_advs_by_text_where_text_is_not_found(test_client, create_test_us
 @pytest.mark.run(order=20)
 def test_update_adv(
         clear_db_before_and_after_test, test_client, app_context, test_user_data, test_adv_params,
-        create_user_through_http, create_adv_through_http, test_adv_id, log_in_through_http
+        create_user_through_http, create_adv_through_http, test_adv_id, access_token
 ):
     new_adv_params = {"title": "new_title", "description": "new_description"}
-    access_token = log_in_through_http
+    access_token = access_token
     response = test_client.patch(
         f"http://127.0.0.1:5000/advertisements/{test_adv_id}/", headers={"Authorization": f"Bearer {access_token}"},
         json=new_adv_params
@@ -454,6 +454,18 @@ def test_update_adv(
     assert response.json["updated_adv_params"] == expected
     assert response.json["updated_adv_params"]["title"] == new_adv_params["title"]
     assert response.json["updated_adv_params"]["description"] == new_adv_params["description"]
+
+
+def test_update_adv_returns_404_when_adv_is_not_found(
+        clear_db_before_and_after_test, test_client, access_token, test_adv_id
+):
+    new_adv_params = {"title": "new_title", "description": "new_description"}
+    response = test_client.patch(
+        f"http://127.0.0.1:5000/advertisements/{test_adv_id}/", headers={"Authorization": f"Bearer {access_token}"},
+        json=new_adv_params
+    )
+    assert response.status_code == 404
+    assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
 @pytest.mark.run(order=21)
