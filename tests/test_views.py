@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pytest
 import sqlalchemy
 
@@ -14,6 +16,48 @@ from app.models import User, Advertisement
 @pytest.fixture(scope="function", autouse=True)
 def register_urls():
     from app import views
+
+
+@pytest.fixture
+def test_user_data():
+    return {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
+
+
+@pytest.fixture
+def test_adv_params():
+    return {"title": "test_title", "description": "test_description"}
+
+
+@pytest.fixture
+def create_user_through_http(test_client, test_user_data) -> int:
+    user_id: int = test_client.post("http://127.0.0.1:5000/users/", json=test_user_data).json
+    return user_id
+
+
+@pytest.fixture
+def test_user_id() -> Literal[1]:
+    return 1
+
+
+@pytest.fixture
+def log_in_through_http(test_client, create_user_through_http, app_context, test_user_data):
+    with app_context:
+        response = test_client.post("http://127.0.0.1:5000/login/", json=test_user_data)
+        access_token = response.json.get("access_token")
+    return access_token
+
+
+@pytest.fixture
+def create_adv_through_http(test_adv_params, test_user_id, test_client, log_in_through_http) -> int:
+    response = test_client.post("http://127.0.0.1:5000/advertisements/", json=test_adv_params,
+                                    headers={"Authorization": f"Bearer {log_in_through_http}"})
+    adv_id: int = response.json.get("new_advertisement_id")
+    return adv_id
+
+
+@pytest.fixture
+def test_adv_id() -> Literal[1]:
+    return 1
 
 
 @pytest.mark.run(order=1)
@@ -394,33 +438,22 @@ def test_search_advs_by_text_where_text_is_not_found(test_client, create_test_us
 
 
 @pytest.mark.run(order=20)
-def test_update_adv(clear_db_before_and_after_test, test_client, app_context):
-    # Input data
-    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-    adv_params = {"title": "test_title", "description": "test_description"}
+def test_update_adv(
+        clear_db_before_and_after_test, test_client, app_context, test_user_data, test_adv_params,
+        create_user_through_http, create_adv_through_http, test_adv_id, log_in_through_http
+):
     new_adv_params = {"title": "new_title", "description": "new_description"}
-
-    # Creation of a new user
-    test_client.post("http://127.0.0.1:5000/users/", json=user_data)
-
-    # Authentication of the created user
-    with app_context:
-        access_token = test_client.post("http://127.0.0.1:5000/login/", json=user_data).json.get("access_token")
-
-    # The user creates a new adv
-    adv_id: int = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params,
-                                   headers={"Authorization": f"Bearer {access_token}"}).json.get("new_advertisement_id")
-
-    # The user updates the adv (that what we test here)
-    response = test_client.patch(f"http://127.0.0.1:5000/advertisements/{adv_id}/",
-                                 headers={"Authorization": f"Bearer {access_token}"}, json=new_adv_params)
-
-    # Expected data (fetched from the repo)
-    expected: dict[str, str | int] = test_client.get(f"http://127.0.0.1:5000/advertisements/{adv_id}/",
+    access_token = log_in_through_http
+    response = test_client.patch(
+        f"http://127.0.0.1:5000/advertisements/{test_adv_id}/", headers={"Authorization": f"Bearer {access_token}"},
+        json=new_adv_params
+    )
+    expected: dict[str, str | int] = test_client.get(f"http://127.0.0.1:5000/advertisements/{test_adv_id}/",
                                                      headers={"Authorization": f"Bearer {access_token}"}).json
-
     assert response.status_code == 200
     assert response.json["updated_adv_params"] == expected
+    assert response.json["updated_adv_params"]["title"] == new_adv_params["title"]
+    assert response.json["updated_adv_params"]["description"] == new_adv_params["description"]
 
 
 @pytest.mark.run(order=21)
