@@ -113,6 +113,20 @@ def create_adv(get_auth_user_id_func: Callable, validate_func: Callable, adv_par
         return adv.id
 
 
+def update_adv(adv_id: int, new_params: dict, check_current_user_func: Callable, uow) -> dict[str, str | int]:
+    with uow:
+        try:
+            adv: Advertisement = uow.advs.get(instance_id=adv_id)
+        except AttributeError:
+            raise app.errors.NotFoundError(message_prefix="The advertisement")
+        check_current_user_func(user_id=adv.user_id)
+        updated_adv: Advertisement = services.update_instance(instance=adv, new_attrs=new_params)
+        uow.advs.add(updated_adv)
+        uow.commit()
+        updated_adv_params: dict = services.get_params(model=updated_adv)
+        return updated_adv_params
+
+
 def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
     with uow:
         results = uow.users.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,

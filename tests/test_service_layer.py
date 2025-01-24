@@ -124,7 +124,7 @@ def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user
         user_id=user_id, check_current_user_func=fake_check_current_user_func, uow=fuow
     )
     users_after_deletion = fusers_repo.get(instance_id=user_id)
-    assert users_after_deletion == []
+    assert users_after_deletion is None
     assert deleted_user_params == user_before_deletion.get_params()
 
 
@@ -196,3 +196,24 @@ def test_get_adv_params_raises_not_found_error(fake_check_current_user_func, fak
     with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
         service_layer.get_adv_params(adv_id=1, check_current_user_func=fake_check_current_user_func, uow=uow)
     assert e.value.message == "The advertisement with the provided parameters is not found."
+
+
+def test_update_adv(
+        fake_get_auth_user_id_func, fake_validate_func, fake_unit_of_work, fake_advs_repo, fake_check_current_user_func
+):
+    old_params = {"title": "test_title", "description": "test_description"}
+    new_params = {"title": "new_title", "description": "new_description"}
+    uow = fake_unit_of_work(advs=fake_advs_repo([]))
+    adv_id: int = service_layer.create_adv(
+        get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=old_params,
+        uow=uow
+    )
+    result: dict[str, str | int] = service_layer.update_adv(
+        adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func, uow=uow
+    )
+    adv_from_repo_params: dict[str, str | int] = service_layer.get_adv_params(
+        adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=uow
+    )
+    assert adv_from_repo_params["title"] == new_params["title"]
+    assert adv_from_repo_params["description"] == new_params["description"]
+    assert result == adv_from_repo_params
