@@ -239,7 +239,6 @@ def test_get_adv_params_returns_404_when_adv_is_not_found(clear_db_before_and_af
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
-
 @pytest.mark.run(order=14)
 def test_update_user_with_correct_input_data(test_client, session_maker, access_token):
     new_data = {"name": "new_name"}
@@ -395,20 +394,33 @@ def test_search_advs_by_text_where_text_is_not_found(test_client, create_test_us
 
 
 @pytest.mark.run(order=20)
-def test_update_adv(test_client, session_maker, access_token):
-    new_data = {"title": "new_title"}
-    response = test_client.patch("http://127.0.0.1:5000/advertisements/1000/",
-                                 json=new_data,
-                                 headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1000')).first()
+def test_update_adv(clear_db_before_and_after_test, test_client, app_context):
+    # Input data
+    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
+    adv_params = {"title": "test_title", "description": "test_description"}
+    new_adv_params = {"title": "new_title", "description": "new_description"}
+
+    # Creation of a new user
+    test_client.post("http://127.0.0.1:5000/users/", json=user_data)
+
+    # Authentication of the created user
+    with app_context:
+        access_token = test_client.post("http://127.0.0.1:5000/login/", json=user_data).json.get("access_token")
+
+    # The user creates a new adv
+    adv_id: int = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params,
+                                   headers={"Authorization": f"Bearer {access_token}"}).json.get("new_advertisement_id")
+
+    # The user updates the adv (that what we test here)
+    response = test_client.patch(f"http://127.0.0.1:5000/advertisements/{adv_id}/",
+                                 headers={"Authorization": f"Bearer {access_token}"}, json=new_adv_params)
+
+    # Expected data (fetched from the repo)
+    expected: dict[str, str | int] = test_client.get(f"http://127.0.0.1:5000/advertisements/{adv_id}/",
+                                                     headers={"Authorization": f"Bearer {access_token}"}).json
+
     assert response.status_code == 200
-    assert response.json == {"modified advertisement params": {"id": data_from_db[0],
-                                                               "title": data_from_db[1],
-                                                               "description": data_from_db[2],
-                                                               "creation_date": data_from_db[3].isoformat(),
-                                                               "user_id": data_from_db[4]}}
+    assert response.json["updated_adv_params"] == expected
 
 
 @pytest.mark.run(order=21)

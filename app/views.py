@@ -151,20 +151,17 @@ def create_adv():
 @adv.route("/advertisements/<int:adv_id>/", methods=["PATCH"])
 @jwt_required()
 def update_adv(adv_id: int):
-    filter_result: FilterResult = service_layer.get_adv(
-        column="id", column_value=adv_id, session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.result:
-            authentication.check_current_user(user_id=filter_result.result[0].user_id, get_cuid=False)
-            validation_result: ValidationResult = validation.validate_data(validation_model=validation.EditAdv,
-                                                                           data=request.json)
-            validated_data = validation_result.validated_data
-            updated_adv = service_layer.edit_model_instance(model_instance=filter_result.result[0],
-                                                            new_data=validated_data)
-            return jsonify({"modified advertisement params": updated_adv.get_adv_params()}), 200
-        raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    try:
+        updated_adv_params: dict [str, str | int] = service_layer.update_adv(
+            adv_id=adv_id, new_params=request.json, check_current_user_func=authentication.check_current_user,
+            validate_func=validation.validate_data_for_adv_updating, uow=UnitOfWork())
+    except app.errors.NotFoundError as e:
+        raise HttpError(status_code=404, description=e.message)
+    except app.errors.CurrentUserError as e:
+        raise HttpError(status_code=403, description=e.message)
+    except app.errors.ValidationError as e:
+        raise HttpError(status_code=400, description=str(e))
+    return {"updated_adv_params": updated_adv_params}, 200
 
 
 @adv.route("/advertisements", methods=["GET"])
