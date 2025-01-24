@@ -115,9 +115,8 @@ def create_adv(get_auth_user_id_func: Callable, validate_func: Callable, adv_par
 
 def update_adv(adv_id: int, new_params: dict, check_current_user_func: Callable, uow) -> dict[str, str | int]:
     with uow:
-        try:
-            adv: Advertisement = uow.advs.get(instance_id=adv_id)
-        except AttributeError:
+        adv: Advertisement = uow.advs.get(instance_id=adv_id)
+        if not adv:
             raise app.errors.NotFoundError(message_prefix="The advertisement")
         check_current_user_func(user_id=adv.user_id)
         updated_adv: Advertisement = services.update_instance(instance=adv, new_attrs=new_params)

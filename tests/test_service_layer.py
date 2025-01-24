@@ -219,7 +219,7 @@ def test_update_adv(
     assert result == adv_from_repo_params
 
 
-def test_update_udv_raises_not_found_error(
+def test_update_adv_raises_not_found_error(
         fake_get_auth_user_id_func, fake_validate_func, fake_check_current_user_func, fake_advs_repo, fake_unit_of_work
 ):
     adv_params = {"title": "test_title", "description": "test_description", "user_id": 1}
@@ -228,7 +228,7 @@ def test_update_udv_raises_not_found_error(
         get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=adv_params,
         uow=uow
     )
-    adv_id, new_params = adv_id + 1, {"param": "param"}
+    adv_id, new_params = adv_id + 1, {"title": "new_title"}
     with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
         service_layer.update_adv(
             adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func, uow=uow
