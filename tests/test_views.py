@@ -468,6 +468,32 @@ def test_update_adv_returns_404_when_adv_is_not_found(
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
+@pytest.mark.parametrize(
+    "new_adv_params,type,loc,input,msg,url", (
+            ({"title": False, "description": "new_description"}, 'string_type', 'title', f"{False}",
+             'Input should be a valid string', 'https://errors.pydantic.dev/2.9/v/string_type'),
+            ({"description": 1}, 'string_type', 'description', f"{1}", 'Input should be a valid string',
+             'https://errors.pydantic.dev/2.9/v/string_type'),
+    )
+)
+def test_update_adv_returns_400_when_invalid_new_adv_params_passed(
+        clear_db_before_and_after_test, test_client, create_adv_through_http, access_token, test_adv_id, new_adv_params,
+        type, loc, input, msg, url
+):
+    response = test_client.patch(
+        f"http://127.0.0.1:5000/advertisements/{test_adv_id}/", headers={"Authorization": f"Bearer {access_token}"},
+        json=new_adv_params
+    )
+    assert response.status_code == 400
+    assert response.json == {
+        "errors": f"[{{'type': '{type}', 'loc': ('{loc}',), 'msg': '{msg}', 'input': {input}, 'url': '{url}'}}]"
+    }
+
+
+
+
+
+
 @pytest.mark.run(order=21)
 def test_get_related_user(test_client, session_maker, access_token):
     response = test_client.get("http://127.0.0.1:5000/advertisements/1/user",
