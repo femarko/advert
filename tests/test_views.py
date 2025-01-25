@@ -438,7 +438,7 @@ def test_search_advs_by_text_where_text_is_not_found(test_client, create_test_us
 
 
 @pytest.mark.run(order=20)
-def test_update_adv(
+def test_update_adv_returns_200(
         clear_db_before_and_after_test, test_client, app_context, test_user_data, test_adv_params,
         create_user_through_http, create_adv_through_http, test_adv_id, access_token
 ):
