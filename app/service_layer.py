@@ -156,9 +156,9 @@ def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[
 
 
 def search_advs_by_text(
-        column: UserColumns | AdvertisementColumns,
-        column_value: str | int | datetime,
         uow,
+        column_value: str | int | datetime,
+        column: str = "description",
         page: Optional[str] = None,
         per_page: Optional[str] = None
 ) -> dict[str, str | int]:

@@ -243,12 +243,8 @@ def test_search_advs_by_text(
         fake_advs_repo, fake_unit_of_work, test_adv_params, fake_get_auth_user_id_func, fake_validate_func
 ):
     uow = fake_unit_of_work(advs=fake_advs_repo([]))
-    adv_id: int = service_layer.create_adv(
-        get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=test_adv_params,
-        uow=uow
-    )
-    column, column_value = "description", "test"
-    result: dict[str, str | int] = service_layer.search_advs_by_text(
-        column=cast(typ=AdvertisementColumns, val=column), column_value=column_value, uow=uow
-    )
+    service_layer.create_adv(get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func,
+                             adv_params=test_adv_params, uow=uow)
+    column_value = "test"
+    result: dict[str, str | int] = service_layer.search_advs_by_text(column_value=column_value, uow=uow)
     assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."
