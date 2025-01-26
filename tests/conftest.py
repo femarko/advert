@@ -1,6 +1,6 @@
 import datetime
 import random
-from typing import Optional
+from typing import Optional, Literal
 
 import pytest
 import sqlalchemy
@@ -126,35 +126,34 @@ def create_test_users_and_advs(session_maker, test_date):
         sess.commit()
 
 
+def return_func_deco(func):
+    def wrapper():
+        return func
+    return wrapper
+
+
 @pytest.fixture(scope="function")
+@return_func_deco
 def fake_get_auth_user_id_func():
-    def foo():
-        return 1
-    return foo
+    return 1
 
 
 @pytest.fixture(scope="function")
-def fake_check_current_user_func():
-    def foo(user_id: int, get_cuid: bool = True):
-        return user_id
-
-    return foo
+@return_func_deco
+def fake_check_current_user_func(user_id: int, get_cuid: bool = True):
+    return user_id
 
 
 @pytest.fixture(scope="function")
-def fake_validate_func():
-    def foo(**data):
-        return data
-
-    return foo
+@return_func_deco
+def fake_validate_func(**data):
+    return data
 
 
 @pytest.fixture(scope="function")
-def fake_hash_pass_func():
-    def foo(password: str):
-        return password
-
-    return foo
+@return_func_deco
+def fake_hash_pass_func(password: str):
+    return password
 
 
 @pytest.fixture(scope="function")
