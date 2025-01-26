@@ -19,16 +19,6 @@ def register_urls():
 
 
 @pytest.fixture
-def test_user_data():
-    return {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-
-
-@pytest.fixture
-def test_adv_params():
-    return {"title": "test_title", "description": "test_description"}
-
-
-@pytest.fixture
 def create_user_through_http(test_client, test_user_data) -> int:
     user_id: int = test_client.post("http://127.0.0.1:5000/users/", json=test_user_data).json
     return user_id
