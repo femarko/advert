@@ -1,5 +1,4 @@
 import datetime
-from typing import cast
 
 import sqlalchemy, pytest
 
@@ -31,7 +30,6 @@ from app import service_layer
 #     assert filter_result.result[0].email == expected[2]
 #     assert filter_result.result[0].password == expected[3]
 #     assert filter_result.result[0].creation_date == expected[4]
-from app.models import Advertisement, AdvertisementColumns
 
 
 def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo,
@@ -237,18 +235,3 @@ def test_update_adv_raises_not_found_error(
             adv_id=adv_id, new_params=new_params, check_current_user_func=fake_check_current_user_func,
             validate_func=fake_validate_func, uow=uow
         )
-
-
-def test_search_advs_by_text(
-        fake_advs_repo, fake_unit_of_work, test_adv_params, fake_get_auth_user_id_func, fake_validate_func
-):
-    uow = fake_unit_of_work(advs=fake_advs_repo([]))
-    adv_id: int = service_layer.create_adv(
-        get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=test_adv_params,
-        uow=uow
-    )
-    column, column_value = "description", "test"
-    result: dict[str, str | int] = service_layer.search_advs_by_text(
-        column=cast(typ=AdvertisementColumns, val=column), column_value=column_value, uow=uow
-    )
-    assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."

@@ -272,13 +272,3 @@ def test_adv(test_date, test_user):
         user=None
     )
     return testadv
-
-
-@pytest.fixture
-def test_user_data():
-    return {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-
-
-@pytest.fixture
-def test_adv_params():
-    return {"title": "test_title", "description": "test_description"}
