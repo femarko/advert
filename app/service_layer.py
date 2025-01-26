@@ -86,7 +86,6 @@ def get_related_advs(authenticated_user_id: int,
                                                              paginate=True,
                                                              page=page,
                                                              per_page=per_page)
-
         return paginated_data
 
 
@@ -156,23 +155,19 @@ def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[
         raise app.errors.NotFoundError(message_prefix="The advertisement")
 
 
-def search_advs_by_text(column: AdvertisementColumns,
-                        column_value: str | int | datetime,
-                        page: int,
-                        per_page: int,
-                        session) -> dict[str, int | list[dict[str, str]]]:
-    filter_result: FilterResult = filter_and_return_paginated_data(session=session,
-                                                                   model_class=Advertisement,
-                                                                   filter_type=FilterTypes.SEARCH_TEXT,
-                                                                   column=column,
-                                                                   column_value=column_value,
-                                                                   page=page,
-                                                                   per_page=per_page)
-    if filter_result.status == "OK":
-        filter_result.result["items"] = [
-            {item.title: item.description} for item in filter_result.result["items"]
-        ]
-    return filter_result
+def search_advs_by_text(
+        column: UserColumns | AdvertisementColumns,
+        column_value: str | int | datetime,
+        uow,
+        page: Optional[str] = None,
+        per_page: Optional[str] = None
+) -> dict[str, str | int]:
+    with uow:
+        paginated_res: dict[str, str | int] = uow.advs.get_list_or_paginated_data(
+            filter_type=FilterTypes.SEARCH_TEXT, comparison=Comparison.IS, column=column, column_value=column_value,
+            page=page, per_page=per_page, paginate=True
+        )
+    return paginated_res
 
 
 def add_model_instance(model_instance: ModelClass) -> ModelClass:
