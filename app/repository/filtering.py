@@ -2,11 +2,12 @@ import enum
 import sqlalchemy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Type, Literal, Any
+from typing import Type, Literal, Any, Optional
 
 from sqlalchemy.orm import Query
 
 import app.errors
+from app import services
 from app.models import AdvertisementColumns, UserColumns, ModelClass, User, Advertisement, ModelClasses
 
 
@@ -73,6 +74,8 @@ class Filter:
         self.query_filtered: Query | None = None
         self.res_list: list | None = None
         self.paginated: dict | None = None
+        self.page_default_value = 1
+        self.per_page_default_value = 10
         self.errors: set[str] = set()
 
     def _add_error(self,
@@ -146,15 +149,35 @@ class Filter:
         if self.errors:
             raise app.errors.ValidationError(list(self.errors))
 
+    def _check_page_and_per_page(self, page: Any, per_page: Any) -> dict[Literal["page", "per_page"], int]:
+        res = {"page": page, "per_page": per_page}
+        for key, value in res.items():
+            match isinstance(value, int), isinstance(value, str):
+                case True, False:
+                    match value <= 0:
+                        case True:
+                            if key == "page": res[key] = self.page_default_value
+                            else: res[key] = self.per_page_default_value
+                        case _ : pass
+                case False, True:
+                    if value.isdigit() and int(value) > 0: res[key] = int(value)
+                    elif key == "page": res[key] = self.page_default_value
+                    else: res[key] = self.per_page_default_value
+                case _:
+                    match key:
+                        case "page": res[key] = self.page_default_value
+                        case _: res[key] = self.per_page_default_value
+        return res
+
     def get_filter_result(self,
-                          model_class: Type[User | Advertisement] | None = None,
-                          filter_type: FilterTypes | None = None,
-                          column: AdvertisementColumns | UserColumns | None = None,
-                          column_value: str | None = None,
-                          comparison: Comparison | None = None,
-                          paginate: bool | None = None,
-                          page: int | None = 1,
-                          per_page: int | None = 10) -> list | dict:
+                          model_class: Optional[Type[User | Advertisement]] = None,
+                          filter_type: Optional[FilterTypes] = None,
+                          column: Optional[AdvertisementColumns | UserColumns] = None,
+                          column_value: Optional[str] = None,
+                          comparison: Optional[Comparison] = None,
+                          paginate: Optional[bool] = None,
+                          page: Optional[int] = None,
+                          per_page: Optional[int] = None) -> list | dict[str, int | list[dict[str, str | int]]]:
         self._validate_params(params=Params, data={'model_class': model_class,
                                                    'filter_type': filter_type,
                                                    'comparison': comparison,
@@ -176,15 +199,19 @@ class Filter:
             self.query_filtered = query.filter(comparison_operator(model_attr, column_value))
         match paginate:
             case True:
+                page_and_per_page = self._check_page_and_per_page(page=page, per_page=per_page)
+                page, per_page = page_and_per_page["page"], page_and_per_page["per_page"]
                 offset = (page - 1) * per_page
                 total: int = self.query_filtered.count()
                 model_instances: list[ModelClass] = self.query_filtered.offset(offset).limit(per_page).all()
-                paginated_data = {"page": page,
-                                  "per_page": per_page,
-                                  "total": total,
-                                  "total_pages": (total + per_page - 1) // per_page,
-                                  "items": [model_instance.get_params() for model_instance in model_instances]}
-                return paginated_data
+                paginated_data: dict[str, int | list[dict[str, str | int]]] = {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": total,
+                    "total_pages": (total + per_page - 1) // per_page,
+                    "items": [services.get_params(model=model_instance) for model_instance in model_instances]
+                }
+                return paginated_data  # type: dict[str, int | list[dict[str, str | int]]]
             case _:
                 return self.query_filtered.all()
 
