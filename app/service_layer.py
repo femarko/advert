@@ -169,8 +169,9 @@ def search_advs_by_text(
             filter_type=FilterTypes.SEARCH_TEXT, comparison=Comparison.IS, column=column, column_value=column_value,
             page=page, per_page=per_page, paginate=True
         )
-    paginated_res["items"] = \
-        [{params_dict["title"]: params_dict["description"]} for params_dict in paginated_res["items"]]
+    paginated_res["items"] = [
+        {params_dict["title"]: params_dict["description"]} for params_dict in paginated_res["items"]
+    ]
     return paginated_res
 
 
