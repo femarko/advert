@@ -6,7 +6,7 @@ import pytest
 import sqlalchemy
 
 import app.pass_hashing, app.errors
-from app import adv, models
+from app import adv, models, services
 
 
 @pytest.fixture(scope="session")
@@ -185,7 +185,9 @@ class FakeBaseRepo:
             return []
         return next(instance for instance in self.instances if instance.id == instance_id)
 
-    def get_list_or_paginated_data(self, **kwargs):
+    def get_list_or_paginated_data(self, paginate: Optional[bool] = False, **kwargs):
+        if paginate:
+            return {"items": [services.get_params(model=item) for item in self.instances]}
         return f"{self.__str__()}: get_list_or_paginated_data() called."
 
     def delete(self, instance):
