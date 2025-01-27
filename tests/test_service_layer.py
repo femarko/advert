@@ -247,4 +247,4 @@ def test_search_advs_by_text(
                              adv_params=test_adv_params, uow=uow)
     column_value = "test"
     result: dict[str, str | int] = service_layer.search_advs_by_text(column_value=column_value, uow=uow)
-    assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."
+    assert result == {"items": [{test_adv_params["title"]: test_adv_params["description"]}]}

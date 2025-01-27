@@ -158,15 +158,19 @@ def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[
 def search_advs_by_text(
         uow,
         column_value: str | int | datetime,
-        column: str = "description",
+        column: Optional[str] = None,
         page: Optional[str] = None,
         per_page: Optional[str] = None
 ) -> dict[str, str | int]:
+    if not column:
+        column = "description"
     with uow:
-        paginated_res: dict[str, str | int] = uow.advs.get_list_or_paginated_data(
+        paginated_res: dict[str, int | list[dict[str, str | int]]] = uow.advs.get_list_or_paginated_data(
             filter_type=FilterTypes.SEARCH_TEXT, comparison=Comparison.IS, column=column, column_value=column_value,
             page=page, per_page=per_page, paginate=True
         )
+    paginated_res["items"] = \
+        [{params_dict["title"]: params_dict["description"]} for params_dict in paginated_res["items"]]
     return paginated_res
 
 
