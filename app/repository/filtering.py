@@ -172,6 +172,7 @@ class Filter:
                     comparison_operator(model_class.creation_date.cast(sqlalchemy.Date),  # type: ignore
                                         datetime.strptime(column_value, "%Y-%m-%d"))
                 )
+            # todo: perhaps "else:" is needed here?
             self.query_filtered = query.filter(comparison_operator(model_attr, column_value))
         match paginate:
             case True:
