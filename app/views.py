@@ -166,20 +166,17 @@ def update_adv(adv_id: int):
 
 @adv.route("/advertisements", methods=["GET"])
 def search_advs_by_text():
-    # data = request.args.to_dict()
-    # validation_result: ValidationResult = validation.validate_data(validation_model=validation.FilterAdvertisement,
-    #                                                                data=data)
-    # validated_data = validation_result.validated_data
-    page = request.args.get("page", 1, type=int)  # todo: add validation
-    per_page = request.args.get("per_page", 10, type=int)  # todo: add validation
-    filter_result: FilterResult = service_layer.search_advs_by_text(column=request.args.get("column"),  # type: ignore
-                                                                    column_value=request.args.get("column_value"),
-                                                                    page=page,
-                                                                    per_page=per_page,
-                                                                    session=request.session)
-    if filter_result.status == "OK":
-        return filter_result.result, 200
-    raise HttpError(status_code=400, description=filter_result.errors)
+    try:
+        paginated_result: dict[str, str | int] = service_layer.search_advs_by_text(
+            column=request.args.get("column"),
+            column_value=request.args.get("column_value"),
+            uow=UnitOfWork(),
+            page=request.args.get("page"),
+            per_page=request.args.get("per_page")
+        )
+    except app.errors.ValidationError as e:
+        raise HttpError(status_code=400, description=str(e))
+    return paginated_result, 200
 
 
 @adv.route("/advertisements/<int:adv_id>/", methods=["DELETE"])
