@@ -406,9 +406,10 @@ def test_search_advs_by_text_returns_200(
                              "total_pages": 1}
 
 
-def test_search_advs_by_text_where_text_is_missing(test_client, create_test_users_and_advs):
-    response = test_client \
-        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description")
+def test_search_advs_by_text_returns_200_when_text_is_missing(
+        clear_db_before_and_after_test, create_adv_through_http, test_client, test_adv_params
+):
+    response = test_client.get("http://127.0.0.1:5000/advertisements")
     assert response.status_code == 200
     assert response.json == {"items": [],
                              "page": 1,
@@ -417,9 +418,10 @@ def test_search_advs_by_text_where_text_is_missing(test_client, create_test_user
                              "total_pages": 0}
 
 
-def test_search_advs_by_text_where_text_is_not_found(test_client, create_test_users_and_advs):
-    response = test_client \
-        .get("http://127.0.0.1:5000/advertisements?filter_type=search_text&column=description&column_value=no_text")
+def test_search_advs_by_text_returns_200_when_text_is_not_found(
+        clear_db_before_and_after_test, create_adv_through_http, test_client, test_adv_params
+):
+    response = test_client .get("http://127.0.0.1:5000/advertisements?column_value=no_text")
     assert response.status_code == 200
     assert response.json == {"items": [],
                              "page": 1,
