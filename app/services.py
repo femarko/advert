@@ -17,11 +17,13 @@ def update_instance(instance: User | Advertisement, new_attrs: dict) -> User | A
 
 def get_params(model: User | Advertisement) -> dict[str, str | int]:
     if isinstance(model, User):
-        params = {"id": model.id, "name": model.name, "email": model.email,
-                  "creation_date": model.creation_date.isoformat()}
-        return params
+        return {
+            "id": model.id, "name": model.name, "email": model.email, "creation_date": model.creation_date.isoformat()
+        }
     if isinstance(model, Advertisement):
-        params = {"id": model.id, "title": model.title, "description": model.description,
-                  "creation_date": model.creation_date.isoformat(), "user_id": model.user_id}
-        return params
+        return {"id": model.id,
+                "title": model.title,
+                "description": model.description,
+                "creation_date": model.creation_date.isoformat(),
+                "user_id": model.user_id}
     return dict()
