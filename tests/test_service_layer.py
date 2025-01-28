@@ -248,3 +248,24 @@ def test_search_advs_by_text(
     column_value = "test"
     result: dict[str, str | int] = service_layer.search_advs_by_text(column_value=column_value, uow=uow)
     assert result == {"items": [{test_adv_params["title"]: test_adv_params["description"]}]}
+
+
+def test_delete_adv(
+        fake_get_auth_user_id_func, fake_validate_func, test_adv_params, fake_users_repo,
+        fake_advs_repo, fake_unit_of_work,
+):
+    fake_advrepo = fake_advs_repo([])
+    fake_uow = fake_unit_of_work(advs=fake_advrepo)
+    adv_id = service_layer.create_adv(
+        get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=test_adv_params,
+        uow=fake_uow
+    )
+    deleted_adv_params: dict[str, str | int] = service_layer.delete_adv(
+        adv_id=adv_id, get_auth_user_id_func=fake_get_auth_user_id_func, uow=fake_uow
+    )
+    assert deleted_adv_params == {"id": deleted_adv_params["id"],
+                                  "title": deleted_adv_params["title"],
+                                  "description": deleted_adv_params["description"],
+                                  "creation_date": deleted_adv_params["creation_date"],
+                                  "user_id": deleted_adv_params["user_id"]}
+    assert fake_advrepo.instances == set()
