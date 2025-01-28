@@ -76,7 +76,7 @@ def get_related_advs(authenticated_user_id: int,
                      check_current_user_func: Callable,
                      uow,
                      page: Optional[int] = None,
-                     per_page: Optional[int] = None) -> dict[str, int | list[ModelClass]]:
+                     per_page: Optional[int] = None) -> dict[str, int | list[dict[str, str | int]]]:
     current_user_id = check_current_user_func(user_id=authenticated_user_id)
     with uow:
         paginated_data = uow.advs.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,

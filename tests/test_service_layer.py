@@ -102,14 +102,25 @@ def test_update_user(fake_check_current_user_func, fake_validate_func, fake_hash
     assert uow.users.instances.pop().password == expected_password
 
 
-def test_get_related_advs(fake_check_current_user_func, fake_users_repo, fake_advs_repo, fake_unit_of_work):
-    fusers_repo = fake_users_repo(users=[])
-    fadvs_repo = fake_advs_repo(advs=[])
-    fuow = fake_unit_of_work(users=fusers_repo, advs=fadvs_repo)
-    result = service_layer.get_related_advs(
-        authenticated_user_id=1, check_current_user_func=fake_check_current_user_func, uow=fuow
+def test_get_related_advs(
+        fake_check_current_user_func, fake_users_repo, fake_advs_repo, fake_unit_of_work, test_user_data,
+        fake_validate_func, fake_hash_pass_func, fake_get_auth_user_id_func, test_adv_params
+):
+    fake_uow = fake_unit_of_work(users=fake_users_repo(users=[]), advs=fake_advs_repo(advs=[]))
+    user_id: int = service_layer.create_user(
+        user_data=test_user_data, validate_func=fake_validate_func, hash_pass_func=fake_hash_pass_func, uow=fake_uow
     )
-    assert result == "FakeAdvsRepo: get_list_or_paginated_data() called."
+    adv_id: int = service_layer.create_adv(
+        get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=test_adv_params,
+        uow=fake_uow
+    )
+    result: dict[str, int | list[dict[str, str | int]]] = service_layer.get_related_advs(
+        authenticated_user_id=user_id, check_current_user_func=fake_check_current_user_func, uow=fake_uow
+    )
+    expected: dict[str, str | int] = service_layer.get_adv_params(
+        adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=fake_uow
+    )
+    assert result["items"] == [expected]
 
 
 def test_delete_user(fake_users_repo, fake_unit_of_work, fake_check_current_user_func, fake_validate_func,
