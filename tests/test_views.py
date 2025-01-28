@@ -430,6 +430,20 @@ def test_search_advs_by_text_returns_200_when_text_is_not_found(
                              "total_pages": 0}
 
 
+def test_search_advs_by_text_returns_400_when_invalid_params_passed(
+        clear_db_before_and_after_test, create_adv_through_http, test_client, test_adv_params
+):
+    response = test_client .get("http://127.0.0.1:5000/advertisements?column=invalid_param")
+    assert response.status_code == 400
+    assert response.json == {'errors': '["For filter_type=<FilterTypes.SEARCH_TEXT: \'search_text\'> '
+                                       "the folowing columns are available: {for <class 'app.models.User'>: "
+                                       "[name, email], for <class 'app.models.Advertisement'>: [title, "
+                                       'description]}", "\'invalid_param\' is invalid value for '
+                                       "'column'. Valid values: ['id', 'title', 'description', "
+                                       '\'creation_date\', \'user_id\']."]'}
+
+
+
 @pytest.mark.run(order=20)
 def test_update_adv_returns_200(
         clear_db_before_and_after_test, test_client, app_context, test_user_data, test_adv_params,
