@@ -577,23 +577,28 @@ def test_delete_user_returns_status_401_when_user_is_not_authenticated(test_clie
 
 
 @pytest.mark.run(order=24)
-def test_delete_adv(test_client, session_maker, access_token):
-    session = session_maker
-    with session() as sess:
-        data_from_db_before_request = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1000')).first()
-    response = test_client.delete("http://127.0.0.1:5000/advertisements/1000/",
-                                  headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db_after_request = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 1000')).first()
+def test_delete_adv_returns_200(
+        clear_db_before_and_after_test, access_token, create_adv_through_http, test_client, test_adv_params
+):
+    get_request_before_deletion = test_client.get(
+        f"http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    response = test_client.delete(
+        f"http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    get_request_after_deletion = test_client.get(
+        f"http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
     assert response.status_code == 200
-    assert response.json == {"deleted advertisement params": {"id": data_from_db_before_request[0],
-                                                              "title": data_from_db_before_request[1],
-                                                              "description": data_from_db_before_request[2],
-                                                              "creation_date":
-                                                                  data_from_db_before_request[3].isoformat(),
-                                                              "user_id": data_from_db_before_request[4]}}
-    assert data_from_db_after_request is None
+    assert response.json == {
+        "deleted_advertisement_params": {"id": get_request_before_deletion.json["id"],
+                                         "title": get_request_before_deletion.json["title"],
+                                         "description": get_request_before_deletion.json["description"],
+                                         "creation_date": get_request_before_deletion.json["creation_date"],
+                                         "user_id": get_request_before_deletion.json["user_id"]}
+    }
+    assert get_request_after_deletion.status_code == 404
+    assert get_request_after_deletion.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
 @pytest.mark.run(order=25)

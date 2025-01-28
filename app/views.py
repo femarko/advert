@@ -182,17 +182,15 @@ def search_advs_by_text():
 @adv.route("/advertisements/<int:adv_id>/", methods=["DELETE"])
 @jwt_required()
 def delete_adv(adv_id: int):
-    filter_result: FilterResult = service_layer.get_adv(
-        column="id", column_value=adv_id, session=request.session  # type: ignore
-    )
-    if filter_result.status == "OK":
-        if filter_result.result:
-            adv_instance: Advertisement = filter_result.result[0]
-            authentication.check_current_user(user_id=adv_instance.user_id, get_cuid=False)
-            service_layer.delete_model_instance(model_instance=adv_instance)
-            return jsonify({"deleted advertisement params": adv_instance.get_params()}), 200
-        raise HttpError(status_code=404, description=f"Advertisement with {adv_id=} is not found.")
-    raise HttpError(status_code=400, description=filter_result.errors)
+    try:
+        deleted_adv_params: dict[str, str | int] = service_layer.delete_adv(
+            adv_id=adv_id, get_auth_user_id_func=authentication.get_authenticated_user_identity, uow=UnitOfWork()
+        )
+    except app.errors.CurrentUserError as e:
+        raise HttpError(status_code=403, description=e.message)
+    except app.errors.NotFoundError as e:
+        raise HttpError(status_code=404, description=e.message)
+    return {"deleted_advertisement_params": deleted_adv_params}, 200
 
 
 @adv.route("/login/", methods=["POST"])
