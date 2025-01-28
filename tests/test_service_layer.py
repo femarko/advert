@@ -8,7 +8,6 @@ from app import pass_hashing, authentication, unit_of_work, validation, models, 
 import app.authentication
 from app import service_layer
 
-
 # @pytest.mark.run(order=9)
 # def test_current_user_is_authorized(access_token):
 #     fake_user_id = 1
@@ -142,7 +141,7 @@ def test_delete_user_raises_not_found_error(fake_users_repo, fake_unit_of_work, 
     )
     uow = fake_unit_of_work(users=fusers_repo)
     with pytest.raises(app.errors.NotFoundError):
-        service_layer.delete_user(user_id=user_id+1, check_current_user_func=fake_check_current_user_func, uow=uow)
+        service_layer.delete_user(user_id=user_id + 1, check_current_user_func=fake_check_current_user_func, uow=uow)
 
 
 def test_create_adv(fake_get_auth_user_id_func, fake_validate_func, fake_hash_pass_func, fake_users_repo,
@@ -184,7 +183,8 @@ def test_get_adv_params(
         get_auth_user_id_func=fake_get_auth_user_id_func, adv_params=adv_params, validate_func=fake_validate_func,
         uow=fuow2
     )
-    result = service_layer.get_adv_params(adv_id=adv_id, check_current_user_func=fake_check_current_user_func, uow=fuow2)
+    result = service_layer.get_adv_params(adv_id=adv_id, check_current_user_func=fake_check_current_user_func,
+                                          uow=fuow2)
     expected_result = {"id": adv_id, "user_id": user_id, **adv_params}
     assert result["id"] == expected_result["id"]
     assert result["title"] == expected_result["title"]
@@ -269,3 +269,18 @@ def test_delete_adv(
                                   "creation_date": deleted_adv_params["creation_date"],
                                   "user_id": deleted_adv_params["user_id"]}
     assert fake_advrepo.instances == set()
+
+
+def test_delete_adv_raises_current_user_error(
+        fake_get_auth_user_id_func, fake_validate_func, test_adv_params, fake_advs_repo, fake_unit_of_work,
+        fake_get_auth_user_id_func_2
+):
+    fake_uow = fake_unit_of_work(advs=fake_advs_repo([]))
+    adv_id: int = service_layer.create_adv(
+        get_auth_user_id_func=fake_get_auth_user_id_func, validate_func=fake_validate_func, adv_params=test_adv_params,
+        uow=fake_uow
+    )
+    with pytest.raises(expected_exception=app.errors.CurrentUserError) as e:
+        service_layer.delete_adv(adv_id=adv_id, get_auth_user_id_func=fake_get_auth_user_id_func_2, uow=fake_uow)
+    assert e.value.message == "Unavailable operation."
+

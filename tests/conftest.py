@@ -138,6 +138,12 @@ def fake_get_auth_user_id_func():
     return 1
 
 
+@pytest.fixture
+@return_func_deco
+def fake_get_auth_user_id_func_2():
+    return 2
+
+
 @pytest.fixture(scope="function")
 @return_func_deco
 def fake_check_current_user_func(user_id: int, get_cuid: bool = True):
