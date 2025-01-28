@@ -86,7 +86,7 @@ def get_related_advs(user_id: int):
     per_page = request.args.get("per_page", 10, type=int)
     try:
         result = service_layer.get_related_advs(
-            authenticated_user_id=user_id,
+            authenticated_user_id=user_id,  # todo: why I called this param "authenticated_user_id"?
             check_current_user_func=authentication.check_current_user,
             page=page,
             per_page=per_page,
