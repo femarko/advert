@@ -18,21 +18,21 @@ from app.unit_of_work import UnitOfWork
 from app.validation import ValidationResult, PydanticModel
 
 
-def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[str, str]], ValidationResult],
-                          validation_model: Type[PydanticModel],
-                          data: dict[str, str]):
-    validation_result = validation_func(validation_model, data)
-    if validation_result.status == "OK":
-        return validation_result.validated_data
-    else:
-        raise HttpError(status_code=400, description=validation_result.validation_errors)
-
-
-def get_filter_result(filter_func: Callable, **params: Any):
-    filter_result = filter_func(**params)
-    if filter_result.status == "OK":
-        return filter_result.result
-    raise HttpError(status_code=400, description=filter_result.errors)
+# def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[str, str]], ValidationResult],
+#                           validation_model: Type[PydanticModel],
+#                           data: dict[str, str]):
+#     validation_result = validation_func(validation_model, data)
+#     if validation_result.status == "OK":
+#         return validation_result.validated_data
+#     else:
+#         raise HttpError(status_code=400, description=validation_result.validation_errors)
+#
+#
+# def get_filter_result(filter_func: Callable, **params: Any):
+#     filter_result = filter_func(**params)
+#     if filter_result.status == "OK":
+#         return filter_result.result
+#     raise HttpError(status_code=400, description=filter_result.errors)
 
 
 @adv.route("/users/<int:user_id>/", methods=["GET"])

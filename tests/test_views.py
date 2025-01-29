@@ -50,7 +50,6 @@ def test_adv_id() -> Literal[1]:
     return 1
 
 
-@pytest.mark.run(order=1)
 def test_create_user(test_client, clear_db_before_and_after_test):
     user_data = {"name": "test_name", "email": "test@email.com", "password": "test_password"}
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
@@ -70,7 +69,7 @@ def test_create_user_with_integrity_error(test_client, clear_db_before_and_after
                               hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     assert response.status_code == 409
-    assert response.json == {"errors": "A user with the provided credentials already existsts."}
+    assert response.json == {"errors": "A user with the provided params already existsts."}
 
 
 @pytest.mark.parametrize(
@@ -80,7 +79,7 @@ def test_create_user_with_integrity_error(test_client, clear_db_before_and_after
             ({"email": "email@test.test", "password": "test_password"}, "name"),
     )
 )
-def test_create_user_where_name_or_email_or_password_missed(test_client, engine, user_data, missed_param):
+def test_create_user_where_name_or_email_or_password_missed(test_client, user_data, missed_param):
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     assert response.status_code == 400
     assert response.json == {'errors': f"[{{'type': 'missing', 'loc': ('{missed_param}',), 'msg': 'Field required', "
@@ -139,8 +138,9 @@ def test_create_adv_returns_201_and_ignores_extra_params(
              "Input should be a valid string", "https://errors.pydantic.dev/2.9/v/string_type"),
     )
 )
-def test_create_adv_returns_400_if_invalid_adv_params_passed(test_client, clear_db_before_and_after_test, app_context,
-                                                             adv_params, type, loc, input, msg, url):
+def test_create_adv_returns_400_if_invalid_adv_params_passed(
+        test_client, clear_db_before_and_after_test, app_context, adv_params, type, loc, input, msg, url
+):
     user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
     service_layer.create_user(
         user_data=user_data, validate_func=validation.validate_data_for_user_creation,
@@ -172,7 +172,7 @@ def test_create_adv_returns_401_when_user_is_not_authenticated(test_client, clea
     assert response.json == {"msg": "Missing Authorization Header"}
 
 
-@pytest.mark.run(order=12)
+# todo: rewrite
 def test_get_user_data(test_client, access_token, test_date):
     response = test_client.get(
         "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token['user_1000']}"}
@@ -186,13 +186,13 @@ def test_get_user_data(test_client, access_token, test_date):
 
 def test_get_user_data_by_other_user(test_client, access_token, test_date):
     response = test_client.get(
-        "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token['user_1001']}"}
+        "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token}"}
     )
     assert response.status_code == 403
     assert response.json == {"errors": "Unavailable operation."}
 
 
-@pytest.mark.run(order=13)
+# todo: rewrite using fixtures of test_views.py
 def test_get_adv_params(test_client, clear_db_before_and_after_test, app_context, fake_get_auth_user_id_func):
     user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
     user_id: int = service_layer.create_user(
@@ -222,6 +222,7 @@ def test_get_adv_params(test_client, clear_db_before_and_after_test, app_context
                              "user_id": expected.user_id}
 
 
+# todo: rewrite using fixtures of test_views.py
 def test_get_adv_params_returns_403_when_current_user_id_does_not_match_user_id_of_the_adv(
         clear_db_before_and_after_test, app_context, test_client
 ):
@@ -252,6 +253,7 @@ def test_get_adv_params_returns_403_when_current_user_id_does_not_match_user_id_
     assert response.json == {"errors": "Unavailable operation."}
 
 
+# todo: rewrite using fixtures of test_views.py
 def test_get_adv_params_returns_404_when_adv_is_not_found(clear_db_before_and_after_test, test_client, app_context):
     password = "test_pass_1"
     user_data = {"name": "test_name_1", "email": "test_email_1", "password": pass_hashing.hash_password(password)}
@@ -273,7 +275,7 @@ def test_get_adv_params_returns_404_when_adv_is_not_found(clear_db_before_and_af
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
-@pytest.mark.run(order=14)
+# todo: rewrite
 def test_update_user_with_correct_input_data(test_client, session_maker, access_token):
     new_data = {"name": "new_name"}
     response = test_client.patch("http://127.0.0.1:5000/users/1000/",
@@ -290,7 +292,7 @@ def test_update_user_with_correct_input_data(test_client, session_maker, access_
                                                "creation_date": data_from_db[3].isoformat()}}
 
 
-@pytest.mark.run(order=15)
+# todo: rewrite
 def test_update_user_with_incorrect_input_data(test_client, access_token):
     new_data = {"name": "new_name"}
     response = test_client.patch("http://127.0.0.1:5000/users/10/", json=new_data,
@@ -299,6 +301,7 @@ def test_update_user_with_incorrect_input_data(test_client, access_token):
     assert response.json == {"errors": "Unavailable operation."}
 
 
+# todo: rewrite
 def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, test_date):
     response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=2&page=1",
                                headers={"Authorization": f"Bearer {access_token['user_1000']}"})
@@ -319,6 +322,7 @@ def test_get_related_advs_represented_in_one_page(test_client, session_maker, ac
                              "total_pages": 1}
 
 
+# todo: rewrite
 @pytest.mark.parametrize("page,adv_id", ((1, 1000), (2, 1003)))
 def test_get_related_advs_represented_in_two_pages(
         test_client, session_maker, access_token, test_date, page, adv_id
@@ -337,7 +341,7 @@ def test_get_related_advs_represented_in_two_pages(
                              "total_pages": 2}
 
 
-@pytest.mark.run(order=18)
+# todo: rewrite
 def test_get_related_advs_where_page_number_is_out_of_range(test_client, session_maker, access_token):
     response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements?page=100",
                                headers={"Authorization": f"Bearer {access_token['user_1000']}"})
@@ -349,6 +353,7 @@ def test_get_related_advs_where_page_number_is_out_of_range(test_client, session
                              "total_pages": 1}
 
 
+# todo: rewrite
 def test_get_related_advs_where_page_and_per_page_params_are_not_passed(
         test_client, session_maker, access_token, test_date
 ):
@@ -371,6 +376,7 @@ def test_get_related_advs_where_page_and_per_page_params_are_not_passed(
                              "total_pages": 1}
 
 
+# todo: rewrite
 def test_get_related_advs_with_incorrect_page_and_per_page_params(
         test_client, session_maker, access_token, test_date
 ):
@@ -393,7 +399,6 @@ def test_get_related_advs_with_incorrect_page_and_per_page_params(
                              "total_pages": 1}
 
 
-@pytest.mark.run(order=19)
 def test_search_advs_by_text_returns_200(
         clear_db_before_and_after_test, create_adv_through_http, test_client, test_adv_params
 ):
@@ -430,6 +435,7 @@ def test_search_advs_by_text_returns_200_when_text_is_not_found(
                              "total_pages": 0}
 
 
+# todo: failes and passes - no understanding regarding the reason (changes the order in the list)
 def test_search_advs_by_text_returns_400_when_invalid_params_passed(
         clear_db_before_and_after_test, create_adv_through_http, test_client, test_adv_params
 ):
@@ -443,8 +449,7 @@ def test_search_advs_by_text_returns_400_when_invalid_params_passed(
                                        '\'creation_date\', \'user_id\']."]'}
 
 
-
-@pytest.mark.run(order=20)
+# todo: no sence: "access_token = access_token"
 def test_update_adv_returns_200(
         clear_db_before_and_after_test, test_client, app_context, test_user_data, test_adv_params,
         create_user_through_http, create_adv_through_http, test_adv_id, access_token
@@ -522,23 +527,20 @@ def test_update_adv_returns_401_when_user_is_unauthorized(
     assert response.json == {'msg': 'Missing Authorization Header'}
 
 
+# def test_get_related_user(test_client, session_maker, access_token):
+#     response = test_client.get("http://127.0.0.1:5000/advertisements/1/user",
+#                                headers={"Authorization": f"Bearer {access_token['user_1']}"})
+#     session = session_maker
+#     with session() as sess:
+#         data_from_db = \
+#             sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1')).first()
+#     assert response.status_code == 200
+#     assert response.json == {"id": data_from_db[0],
+#                              "name": data_from_db[1],
+#                              "email": data_from_db[2],
+#                              "creation_date": data_from_db[3].isoformat()}
 
-@pytest.mark.run(order=21)
-def test_get_related_user(test_client, session_maker, access_token):
-    response = test_client.get("http://127.0.0.1:5000/advertisements/1/user",
-                               headers={"Authorization": f"Bearer {access_token['user_1']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = \
-            sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1')).first()
-    assert response.status_code == 200
-    assert response.json == {"id": data_from_db[0],
-                             "name": data_from_db[1],
-                             "email": data_from_db[2],
-                             "creation_date": data_from_db[3].isoformat()}
-
-
-@pytest.mark.run(order=22)
+# todo: rewrite
 def test_delete_adv_with_wrong_authorized_user(test_client, session_maker, access_token):
     response = test_client.delete("http://127.0.0.1:5000/advertisements/2/",
                                   headers={"Authorization": f"Bearer {access_token['user_2']}"})
@@ -550,7 +552,7 @@ def test_delete_adv_with_wrong_authorized_user(test_client, session_maker, acces
     assert data_from_db is not None
 
 
-@pytest.mark.run(order=23)
+# todo: rewrite
 def test_delete_user(test_client, session_maker, access_token):
     response = test_client.delete("http://127.0.0.1:5000/users/1000/",
                                   headers={"Authorization": f"Bearer {access_token['user_1000']}"})
@@ -563,6 +565,7 @@ def test_delete_user(test_client, session_maker, access_token):
     assert related_adv_from_db is None
 
 
+# todo: rewrite
 def test_delete_user_returns_status_403_when_current_user_check_fails(test_client, session_maker, access_token):
     response = test_client.delete("http://127.0.0.1:5000/users/1000/",
                                   headers={"Authorization": f"Bearer {access_token['user_1001']}"})
@@ -570,13 +573,13 @@ def test_delete_user_returns_status_403_when_current_user_check_fails(test_clien
     assert response.json == {"errors": "Unavailable operation."}
 
 
+# todo: rewrite
 def test_delete_user_returns_status_401_when_user_is_not_authenticated(test_client, session_maker, access_token):
     response = test_client.delete("http://127.0.0.1:5000/users/1000/")
     assert response.status_code == 401
     assert response.json == {"msg": "Missing Authorization Header"}
 
 
-@pytest.mark.run(order=24)
 def test_delete_adv_returns_200(
         clear_db_before_and_after_test, access_token, create_adv_through_http, test_client, test_adv_params
 ):
@@ -611,7 +614,7 @@ def test_delete_adv_returns_404_when_adv_is_not_found(
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
-@pytest.mark.run(order=25)
+# todo: rewrite with test_service_layer fixtures
 def test_login_with_correct_credentials(test_client, app_context, create_test_users_and_advs):
     with app_context:
         response = test_client.post("http://127.0.0.1:5000/login/",
@@ -622,7 +625,7 @@ def test_login_with_correct_credentials(test_client, app_context, create_test_us
     assert len(response.json["access_token"]) >= 32
 
 
-@pytest.mark.run(order=26)
+# todo: rewrite
 @pytest.mark.parametrize(
     "input_data",
     (
@@ -637,7 +640,7 @@ def test_login_with_incorrect_credentials(test_client, app_context, input_data):
     assert response.json == {"errors": "Invalid credentials."}
 
 
-@pytest.mark.run(order=27)
+# todo: rewrite, possibly
 @pytest.mark.parametrize(
     "input_data, missed_field",
     (

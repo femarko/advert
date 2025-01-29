@@ -21,22 +21,22 @@ logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
-@adv.before_request
-def before_request() -> None:
-    session = models.session_maker()
-    request.session = session
+# @adv.before_request
+# def before_request() -> None:
+#     session = models.session_maker()
+#     request.session = session
+#
+#
+# @adv.after_request
+# def after_request(response: Response) -> Response:
+#     request.session.close()
+#     return response
 
 
-@adv.after_request
-def after_request(response: Response) -> Response:
-    request.session.close()
-    return response
-
-
-def process_result(result: BaseResult):
-    if result.errors:
-        raise FailedToGetResultError(f"{result.errors}")
-    return result.result
+# def process_result(result: BaseResult):
+#     if result.errors:
+#         raise FailedToGetResultError(f"{result.errors}")
+#     return result.result
 
 
 def get_user_data(user_id: int, check_current_user_func: Callable, uow):
@@ -139,10 +139,10 @@ def get_users_list(column: UserColumns, column_value: str | int | datetime, uow)
         return results
 
 
-def get_user_by_id(user_id: int, uow):
-    with uow:
-        user_instance = uow.users.get(user_id)
-    return user_instance
+# def get_user_by_id(user_id: int, uow):
+#     with uow:
+#         user_instance = uow.users.get(user_id)
+#     return user_instance
 
 
 def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
@@ -190,41 +190,41 @@ def delete_adv(adv_id: int, get_auth_user_id_func: Callable, uow) -> dict[str, s
             raise app.errors.NotFoundError(message_prefix="The advertisement")
 
 
-def add_model_instance(model_instance: ModelClass) -> ModelClass:
-    try:
-        request.session.add(model_instance)
-        request.session.commit()
-    except IntegrityError:
-        raise HttpError(409, "user already exists")
-    return model_instance
-
-
-def edit_model_instance(model_instance: ModelClass, new_data: dict) -> ModelClass:
-    for key, value in new_data.items():
-        setattr(model_instance, key, value)
-    request.session.add(model_instance)
-    request.session.commit()
-    return model_instance
-
-
-def delete_model_instance(model_instance: ModelClass):
-    request.session.delete(model_instance)
-    request.session.commit()
-
-
-def validate(validation_func: Callable[..., BaseResult], input_data: dict[str, Any]) -> dict[str, Any]:
-    validation_result = validation_func(validation_model=validation.Login, data=input_data)
-    if validation_result.errors:
-        raise ValidationError(f"{validation_result.errors}")
-    return validation_result.result
-
-
-def check_current_user(checking_func: Callable[[Optional[int]], BaseResult], user_id: Optional[int]) -> int:
-    try:
-        current_user_id = process_result(result=checking_func(user_id))
-        return current_user_id
-    except FailedToGetResultError:
-        raise CurrentUserError
+# def add_model_instance(model_instance: ModelClass) -> ModelClass:
+#     try:
+#         request.session.add(model_instance)
+#         request.session.commit()
+#     except IntegrityError:
+#         raise HttpError(409, "user already exists")
+#     return model_instance
+#
+#
+# def edit_model_instance(model_instance: ModelClass, new_data: dict) -> ModelClass:
+#     for key, value in new_data.items():
+#         setattr(model_instance, key, value)
+#     request.session.add(model_instance)
+#     request.session.commit()
+#     return model_instance
+#
+#
+# def delete_model_instance(model_instance: ModelClass):
+#     request.session.delete(model_instance)
+#     request.session.commit()
+#
+#
+# def validate(validation_func: Callable[..., BaseResult], input_data: dict[str, Any]) -> dict[str, Any]:
+#     validation_result = validation_func(validation_model=validation.Login, data=input_data)
+#     if validation_result.errors:
+#         raise ValidationError(f"{validation_result.errors}")
+#     return validation_result.result
+#
+#
+# def check_current_user(checking_func: Callable[[Optional[int]], BaseResult], user_id: Optional[int]) -> int:
+#     try:
+#         current_user_id = process_result(result=checking_func(user_id))
+#         return current_user_id
+#     except FailedToGetResultError:
+#         raise CurrentUserError
 
 
 def jwt_auth(validate_func: Callable,
