@@ -172,19 +172,21 @@ def test_create_adv_returns_401_when_user_is_not_authenticated(test_client, clea
     assert response.json == {"msg": "Missing Authorization Header"}
 
 
-# todo: rewrite
-def test_get_user_data(test_client, access_token, test_date):
+def test_get_user_data(clear_db_before_and_after_test, test_client, access_token, test_date, test_user_data):
     response = test_client.get(
-        "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token['user_1000']}"}
+        "http://127.0.0.1:5000/users/1/", headers={"Authorization": f"Bearer {access_token}"}
     )
+    uow = unit_of_work.UnitOfWork()
+    with uow:
+        user_from_repo: User = uow.users.get(instance_id=1)
     assert response.status_code == 200
-    assert response.json == {"id": 1000,
-                             "name": f"test_filter_1000",
-                             "email": "test_filter_1000@email.com",
-                             "creation_date": test_date.isoformat()}
+    assert response.json == {"id": user_from_repo.id,
+                             "name": user_from_repo.name,
+                             "email": user_from_repo.email,
+                             "creation_date": user_from_repo.creation_date.isoformat()}
 
 
-def test_get_user_data_by_other_user(test_client, access_token, test_date):
+def test_get_user_data_by_other_user(clear_db_before_and_after_test, test_client, access_token, test_date):
     response = test_client.get(
         "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token}"}
     )
@@ -192,60 +194,27 @@ def test_get_user_data_by_other_user(test_client, access_token, test_date):
     assert response.json == {"errors": "Unavailable operation."}
 
 
-# todo: rewrite using fixtures of test_views.py
-def test_get_adv_params(test_client, clear_db_before_and_after_test, app_context, fake_get_auth_user_id_func):
-    user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-    user_id: int = service_layer.create_user(
-        user_data=user_data, validate_func=validation.validate_data_for_user_creation,
-        hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
-    )
-    adv_params = {"title": "test_title", "description": "test_description", "user_id": user_id}
-    adv = services.create_adv(**adv_params)
-    uow = unit_of_work.UnitOfWork()
-    with uow:
-        uow.advs.add(instance=adv)
-        uow.commit()
-        with app_context:
-            access_token = service_layer.jwt_auth(
-                validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
-                grant_access_func=authentication.get_access_token, credentials=user_data, uow=uow
-            )
-        expected = uow.advs.get(instance_id=1)
+def test_get_adv_params(clear_db_before_and_after_test, create_adv_through_http, test_client, access_token):
     response = test_client.get(
         "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
     )
-    assert response.status_code == 200
-    assert response.json == {"id": expected.id,
-                             "title": expected.title,
-                             "description": expected.description,
-                             "creation_date": expected.creation_date.isoformat(),
-                             "user_id": expected.user_id}
-
-
-# todo: rewrite using fixtures of test_views.py
-def test_get_adv_params_returns_403_when_current_user_id_does_not_match_user_id_of_the_adv(
-        clear_db_before_and_after_test, app_context, test_client
-):
-    password_1 = "test_pass_1"
-    password_2 = "test_pass_2"
-    user_data_1 = {"name": "test_name_1", "email": "test_email_1", "password": pass_hashing.hash_password(password_1)}
-    user_data_2 = {"name": "test_name_2", "email": "test_email_2", "password": pass_hashing.hash_password(password_2)}
-    adv_params = {"user_id": 2, "title": "test_title", "description": "test_description"}
-    user_1: User = services.create_user(**user_data_1)
-    user_2: User = services.create_user(**user_data_2)
-    adv: Advertisement = services.create_adv(**adv_params)
     uow = unit_of_work.UnitOfWork()
     with uow:
-        uow.users.add(instance=user_1)
-        uow.users.add(instance=user_2)
-        uow.advs.add(instance=adv)
-        uow.commit()
-    with app_context:
-        access_token = service_layer.jwt_auth(
-            validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
-            grant_access_func=authentication.get_access_token,
-            credentials={"email": user_data_1["email"], "password": password_1}, uow=uow
-        )
+        adv_from_repo: Advertisement = uow.advs.get(instance_id=1)
+    assert response.status_code == 200
+    assert response.json == {"id": adv_from_repo.id,
+                             "title": adv_from_repo.title,
+                             "description": adv_from_repo.description,
+                             "creation_date": adv_from_repo.creation_date.isoformat(),
+                             "user_id": adv_from_repo.user_id}
+
+
+def test_get_adv_params_returns_403_when_current_user_id_does_not_match_user_id_of_the_adv(
+        clear_db_before_and_after_test, test_client, create_adv_through_http
+):
+    user_data_2 = {"name": "test_name_2", "email": "test_email_2",  "password": "password_2"}
+    test_client.post("http://127.0.0.1:5000/users/", json=user_data_2)
+    access_token: str = test_client.post("http://127.0.0.1:5000/login/", json=user_data_2).json["access_token"]
     response = test_client.get(
         "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
     )
@@ -253,149 +222,125 @@ def test_get_adv_params_returns_403_when_current_user_id_does_not_match_user_id_
     assert response.json == {"errors": "Unavailable operation."}
 
 
-# todo: rewrite using fixtures of test_views.py
-def test_get_adv_params_returns_404_when_adv_is_not_found(clear_db_before_and_after_test, test_client, app_context):
-    password = "test_pass_1"
-    user_data = {"name": "test_name_1", "email": "test_email_1", "password": pass_hashing.hash_password(password)}
-    user: User = services.create_user(**user_data)
-    uow = unit_of_work.UnitOfWork()
-    with uow:
-        uow.users.add(instance=user)
-        uow.commit()
-    with app_context:
-        access_token = service_layer.jwt_auth(
-            validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
-            grant_access_func=authentication.get_access_token,
-            credentials={"email": user_data["email"], "password": password}, uow=uow
-        )
+def test_get_adv_params_returns_404_when_adv_is_not_found(clear_db_before_and_after_test, test_client, access_token):
     response = test_client.get(
-        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+        "http://127.0.0.1:5000/advertisements/2/", headers={"Authorization": f"Bearer {access_token}"}
     )
     assert response.status_code == 404
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
-# todo: rewrite
-def test_update_user_with_correct_input_data(test_client, session_maker, access_token):
+def test_update_user_returns_200(clear_db_before_and_after_test, test_client, access_token, test_user_data):
     new_data = {"name": "new_name"}
-    response = test_client.patch("http://127.0.0.1:5000/users/1000/",
-                                 json=new_data,
-                                 headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = \
-            sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1000')).first()
+    response = test_client.patch(
+        "http://127.0.0.1:5000/users/1/", json=new_data, headers={"Authorization": f"Bearer {access_token}"}
+    )
+    user_data_from_repo: dict[str, str | int] = test_client.get(
+        "http://127.0.0.1:5000/users/1/", headers={"Authorization": f"Bearer {access_token}"}
+    ).json
+    expected = {
+        **test_user_data, "id": user_data_from_repo["id"], "creation_date": user_data_from_repo["creation_date"]
+    }
     assert response.status_code == 200
-    assert response.json == {"modified_data": {"id": data_from_db[0],
-                                               "name": data_from_db[1],
-                                               "email": data_from_db[2],
-                                               "creation_date": data_from_db[3].isoformat()}}
+    assert response.json == {"modified_data": {"id": expected["id"],
+                                               "name": new_data["name"],
+                                               "email": expected["email"],
+                                               "creation_date": expected["creation_date"]}}
 
 
-# todo: rewrite
-def test_update_user_with_incorrect_input_data(test_client, access_token):
+def test_update_user_returns_403_when_user_has_no_authority_to_update(
+        clear_db_before_and_after_test, create_user_through_http, test_client, access_token
+):
     new_data = {"name": "new_name"}
     response = test_client.patch("http://127.0.0.1:5000/users/10/", json=new_data,
-                                 headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+                                 headers={"Authorization": f"Bearer {access_token}"})
     assert response.status_code == 403
     assert response.json == {"errors": "Unavailable operation."}
 
 
-# todo: rewrite
-def test_get_related_advs_represented_in_one_page(test_client, session_maker, access_token, test_date):
-    response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=2&page=1",
-                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+def test_get_related_advs_returns_200(
+        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http, test_date, test_adv_params
+):
+    response = test_client.get(f"http://127.0.0.1:5000/users/1/advertisements",
+                               headers={"Authorization": f"Bearer {access_token}"})
+    adv_params_from_repo: dict[str, str | int] = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    ).json
+    expected = {
+        **test_adv_params, "id": adv_params_from_repo["id"], "creation_date": adv_params_from_repo["creation_date"],
+        "user_id": adv_params_from_repo["user_id"]
+    }
     assert response.status_code == 200
-    assert response.json == {"items": [{"id": 1000,
-                                        "title": f"test_filter_1000",
-                                        "description": "test_filter_1000",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000},
-                                       {"id": 1003,
-                                        "title": f"test_filter_1003",
-                                        "description": "test_filter_1003",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000}],
+    assert response.json == {"items": [{"id": expected["id"],
+                                        "title": expected["title"],
+                                        "description": expected["description"],
+                                        "creation_date": expected["creation_date"],
+                                        "user_id": expected["user_id"]}],
                              "page": 1,
-                             "per_page": 2,
-                             "total": 2,
+                             "per_page": 10,
+                             "total": 1,
                              "total_pages": 1}
 
 
-# todo: rewrite
-@pytest.mark.parametrize("page,adv_id", ((1, 1000), (2, 1003)))
-def test_get_related_advs_represented_in_two_pages(
-        test_client, session_maker, access_token, test_date, page, adv_id
-):
-    response = test_client.get(f"http://127.0.0.1:5000/users/1000/advertisements?per_page=1&page={page}",
-                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    assert response.status_code == 200
-    assert response.json == {"items": [{"id": adv_id,
-                                        "title": f"test_filter_{adv_id}",
-                                        "description": f"test_filter_{adv_id}",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000}],
-                             "page": page,
-                             "per_page": 1,
-                             "total": 2,
-                             "total_pages": 2}
-
-
-# todo: rewrite
-def test_get_related_advs_where_page_number_is_out_of_range(test_client, session_maker, access_token):
-    response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements?page=100",
-                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+def test_get_related_advs_returns_200_when_page_number_is_out_of_range(
+        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http):
+    response = test_client.get(
+        "http://127.0.0.1:5000/users/1/advertisements?page=100", headers={"Authorization": f"Bearer {access_token}"}
+    )
     assert response.status_code == 200
     assert response.json == {"items": [],
                              "page": 100,
                              "per_page": 10,
-                             "total": 2,
+                             "total": 1,
                              "total_pages": 1}
 
 
-# todo: rewrite
-def test_get_related_advs_where_page_and_per_page_params_are_not_passed(
-        test_client, session_maker, access_token, test_date
+def test_get_related_advs_returns_200_when_page_and_per_page_params_are_not_passed(
+        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http, test_adv_params
 ):
-    response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements",
-                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+    response = test_client.get(
+        "http://127.0.0.1:5000/users/1/advertisements", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    adv_params_from_repo: dict[str, str | int] = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    ).json
+    expected = {
+        **test_adv_params, "id": adv_params_from_repo["id"], "creation_date": adv_params_from_repo["creation_date"],
+        "user_id": adv_params_from_repo["user_id"]
+    }
     assert response.status_code == 200
-    assert response.json == {"items": [{"id": 1000,
-                                        "title": f"test_filter_1000",
-                                        "description": "test_filter_1000",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000},
-                                       {"id": 1003,
-                                        "title": f"test_filter_1003",
-                                        "description": "test_filter_1003",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000}],
+    assert response.json == {"items": [{"id": expected["id"],
+                                        "title": expected["title"],
+                                        "description": expected["description"],
+                                        "creation_date": expected["creation_date"],
+                                        "user_id": expected["user_id"]}],
                              "page": 1,
                              "per_page": 10,
-                             "total": 2,
+                             "total": 1,
                              "total_pages": 1}
 
 
-# todo: rewrite
-def test_get_related_advs_with_incorrect_page_and_per_page_params(
-        test_client, session_maker, access_token, test_date
+def test_get_related_advs_returns_200_when_incorrect_page_and_per_page_params_passed(
+        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http, test_adv_params
 ):
-    response = test_client.get("http://127.0.0.1:5000/users/1000/advertisements?per_page=error&page=error",
-                               headers={"Authorization": f"Bearer {access_token['user_1000']}"})
+    response = test_client.get("http://127.0.0.1:5000/users/1/advertisements?per_page=error&page=error",
+                               headers={"Authorization": f"Bearer {access_token}"})
+    adv_params_from_repo: dict[str, str | int] = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    ).json
+    expected = {
+        **test_adv_params, "id": adv_params_from_repo["id"], "creation_date": adv_params_from_repo["creation_date"],
+        "user_id": adv_params_from_repo["user_id"]
+    }
     assert response.status_code == 200
-    assert response.json == {"items": [{"id": 1000,
-                                        "title": f"test_filter_1000",
-                                        "description": "test_filter_1000",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000},
-                                       {"id": 1003,
-                                        "title": f"test_filter_1003",
-                                        "description": "test_filter_1003",
-                                        "creation_date": test_date.isoformat(),
-                                        "user_id": 1000}],
+    assert response.json == {"items": [{"id": expected["id"],
+                                        "title": expected["title"],
+                                        "description": expected["description"],
+                                        "creation_date": expected["creation_date"],
+                                        "user_id": expected["user_id"]}],
                              "page": 1,
                              "per_page": 10,
-                             "total": 2,
+                             "total": 1,
                              "total_pages": 1}
 
 
