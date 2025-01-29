@@ -172,7 +172,7 @@ def test_create_adv_returns_401_when_user_is_not_authenticated(test_client, clea
     assert response.json == {"msg": "Missing Authorization Header"}
 
 
-def test_get_user_data(clear_db_before_and_after_test, test_client, access_token, test_date, test_user_data):
+def test_get_user_data_returns_200(clear_db_before_and_after_test, test_client, access_token, test_date, test_user_data):
     response = test_client.get(
         "http://127.0.0.1:5000/users/1/", headers={"Authorization": f"Bearer {access_token}"}
     )
@@ -186,7 +186,9 @@ def test_get_user_data(clear_db_before_and_after_test, test_client, access_token
                              "creation_date": user_from_repo.creation_date.isoformat()}
 
 
-def test_get_user_data_by_other_user(clear_db_before_and_after_test, test_client, access_token, test_date):
+def test_get_user_data_returns_403_when_other_user_is_authenticated(
+        clear_db_before_and_after_test, test_client, access_token, test_date
+):
     response = test_client.get(
         "http://127.0.0.1:5000/users/1000/", headers={"Authorization": f"Bearer {access_token}"}
     )
@@ -394,13 +396,11 @@ def test_search_advs_by_text_returns_400_when_invalid_params_passed(
                                        '\'creation_date\', \'user_id\']."]'}
 
 
-# todo: no sence: "access_token = access_token"
 def test_update_adv_returns_200(
         clear_db_before_and_after_test, test_client, app_context, test_user_data, test_adv_params,
         create_user_through_http, create_adv_through_http, test_adv_id, access_token
 ):
     new_adv_params = {"title": "new_title", "description": "new_description"}
-    access_token = access_token
     response = test_client.patch(
         f"http://127.0.0.1:5000/advertisements/{test_adv_id}/", headers={"Authorization": f"Bearer {access_token}"},
         json=new_adv_params
@@ -463,7 +463,7 @@ def test_update_adv_returns_403_when_current_user_check_fails(
     assert response.json == {"errors": "Unavailable operation."}
 
 
-def test_update_adv_returns_401_when_user_is_unauthorized(
+def test_update_adv_returns_401_when_user_is_not_authenticated(
         clear_db_before_and_after_test, test_client, create_adv_through_http, test_adv_id
 ):
     new_adv_params = {"title": "new_title"}
@@ -472,42 +472,18 @@ def test_update_adv_returns_401_when_user_is_unauthorized(
     assert response.json == {'msg': 'Missing Authorization Header'}
 
 
-# def test_get_related_user(test_client, session_maker, access_token):
-#     response = test_client.get("http://127.0.0.1:5000/advertisements/1/user",
-#                                headers={"Authorization": f"Bearer {access_token['user_1']}"})
-#     session = session_maker
-#     with session() as sess:
-#         data_from_db = \
-#             sess.execute(sqlalchemy.text('SELECT id, name, email, creation_date FROM "user" WHERE id = 1')).first()
-#     assert response.status_code == 200
-#     assert response.json == {"id": data_from_db[0],
-#                              "name": data_from_db[1],
-#                              "email": data_from_db[2],
-#                              "creation_date": data_from_db[3].isoformat()}
-
-# todo: rewrite
-def test_delete_adv_with_wrong_authorized_user(test_client, session_maker, access_token):
-    response = test_client.delete("http://127.0.0.1:5000/advertisements/2/",
-                                  headers={"Authorization": f"Bearer {access_token['user_2']}"})
-    session = session_maker
-    with session() as sess:
-        data_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE id = 2')).first()
-    assert response.status_code == 403
-    assert response.json == {"error": "Forbidden."}
-    assert data_from_db is not None
-
-
-# todo: rewrite
-def test_delete_user(test_client, session_maker, access_token):
-    response = test_client.delete("http://127.0.0.1:5000/users/1000/",
-                                  headers={"Authorization": f"Bearer {access_token['user_1000']}"})
-    session = session_maker
-    with session() as sess:
-        user_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "user" WHERE id = 1000')).first()
-        related_adv_from_db = sess.execute(sqlalchemy.text('SELECT * FROM "adv" WHERE user_id = 1000')).first()
+def test_delete_user_returns_200(clear_db_before_and_after_test, test_client, access_token, create_adv_through_http):
+    response = test_client.delete("http://127.0.0.1:5000/users/1/", headers={"Authorization": f"Bearer {access_token}"})
+    response_for_deleted_user = test_client.get(
+        "http://127.0.0.1:5000/users/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    response_for_related_adv = test_client.get(
+        "http://127.0.0.1:5000/users/1/advertisements", headers={"Authorization": f"Bearer {access_token}"}
+    )
     assert response.status_code == 200
-    assert user_from_db is None
-    assert related_adv_from_db is None
+    assert response_for_deleted_user.status_code == response_for_related_adv.status_code == 404
+    assert response_for_deleted_user.json == {"errors": "The user with the provided parameters is not found."}
+    assert response_for_related_adv.json == {"errors": "The related advertisements are not found."}
 
 
 # todo: rewrite
@@ -518,9 +494,8 @@ def test_delete_user_returns_status_403_when_current_user_check_fails(test_clien
     assert response.json == {"errors": "Unavailable operation."}
 
 
-# todo: rewrite
-def test_delete_user_returns_status_401_when_user_is_not_authenticated(test_client, session_maker, access_token):
-    response = test_client.delete("http://127.0.0.1:5000/users/1000/")
+def test_delete_user_returns_status_401_when_user_is_not_authenticated(test_client, access_token):
+    response = test_client.delete("http://127.0.0.1:5000/users/1/")
     assert response.status_code == 401
     assert response.json == {"msg": "Missing Authorization Header"}
 
@@ -547,6 +522,22 @@ def test_delete_adv_returns_200(
     }
     assert get_request_after_deletion.status_code == 404
     assert get_request_after_deletion.json == {"errors": "The advertisement with the provided parameters is not found."}
+
+
+def test_delete_adv_returns_403_when_user_has_no_authority(
+        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http
+):
+    # Creation of a "wrong" user and access token for him
+    wrong_user_data = {"name": "wrong_name", "email": "wrong_email", "password": "wrong_pass"}
+    test_client.post("http://127.0.0.1:5000/users/", json=wrong_user_data)
+    wrong_user_access_token: str = test_client.post("http://127.0.0.1:5000/login/", json=wrong_user_data).json[
+        "access_token"
+    ]
+    # Delete request with "wrong_user_access_token" (that what we test here)
+    response = test_client.delete("http://127.0.0.1:5000/advertisements/1/",
+                                  headers={"Authorization": f"Bearer {wrong_user_access_token}"})
+    assert response.status_code == 403
+    assert response.json == {"errors": "Unavailable operation."}
 
 
 def test_delete_adv_returns_404_when_adv_is_not_found(
