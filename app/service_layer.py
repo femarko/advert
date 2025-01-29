@@ -75,21 +75,20 @@ def update_user(user_id: int, check_current_user_func: Callable, validate_func: 
         return updated_user_params
 
 
-def get_related_advs(authenticated_user_id: int,
-                     check_current_user_func: Callable,
-                     uow,
-                     page: Optional[int] = None,
-                     per_page: Optional[int] = None) -> dict[str, int | list[dict[str, str | int]]]:
+def get_related_advs(
+        authenticated_user_id: int, check_current_user_func: Callable, uow, page: Optional[int] = None,
+        per_page: Optional[int] = None
+) -> dict[str, int | list[dict[str, str | int]]]:
+
     current_user_id = check_current_user_func(user_id=authenticated_user_id)
     with uow:
-        paginated_data = uow.advs.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
-                                                             comparison=Comparison.IS,
-                                                             column=AdvertisementColumns.USER_ID,
-                                                             column_value=current_user_id,
-                                                             paginate=True,
-                                                             page=page,
-                                                             per_page=per_page)
+        paginated_data = uow.advs.get_list_or_paginated_data(
+            filter_type=FilterTypes.COLUMN_VALUE, comparison=Comparison.IS, column=AdvertisementColumns.USER_ID,
+            column_value=current_user_id, paginate=True, page=page, per_page=per_page
+        )
+    if paginated_data["items"]:
         return paginated_data
+    raise app.errors.NotFoundError(base_message="The related advertisements are not found.")
 
 
 def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
