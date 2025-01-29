@@ -295,3 +295,9 @@ def test_delete_adv_raises_current_user_error(
         service_layer.delete_adv(adv_id=adv_id, get_auth_user_id_func=fake_get_auth_user_id_func_2, uow=fake_uow)
     assert e.value.message == "Unavailable operation."
 
+
+def test_delete_adv_raises_not_found_error(fake_get_auth_user_id_func, fake_advs_repo, fake_unit_of_work,):
+    fake_uow = fake_unit_of_work(advs=fake_advs_repo([]))
+    with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
+        service_layer.delete_adv(adv_id=1, get_auth_user_id_func=fake_get_auth_user_id_func, uow=fake_uow)
+    assert e.value.message == "The advertisement with the provided parameters is not found."

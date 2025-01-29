@@ -179,12 +179,15 @@ def delete_adv(adv_id: int, get_auth_user_id_func: Callable, uow) -> dict[str, s
     authenticated_user_id: int = get_auth_user_id_func()
     with uow:
         adv_to_delete = uow.advs.get(adv_id)
-        if adv_to_delete.user_id == authenticated_user_id:
-            deleted_adv_params: dict[str, str | int] = services.get_params(model=adv_to_delete)
-            uow.advs.delete(adv_to_delete)
-            uow.commit()
-            return deleted_adv_params
-        raise app.errors.CurrentUserError
+        try:
+            if adv_to_delete.user_id == authenticated_user_id:
+                deleted_adv_params: dict[str, str | int] = services.get_params(model=adv_to_delete)
+                uow.advs.delete(adv_to_delete)
+                uow.commit()
+                return deleted_adv_params
+            raise app.errors.CurrentUserError
+        except AttributeError:
+            raise app.errors.NotFoundError(message_prefix="The advertisement")
 
 
 def add_model_instance(model_instance: ModelClass) -> ModelClass:

@@ -601,6 +601,16 @@ def test_delete_adv_returns_200(
     assert get_request_after_deletion.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
+def test_delete_adv_returns_404_when_adv_is_not_found(
+        clear_db_before_and_after_test, access_token, test_client
+):
+    response = test_client.delete(
+        f"http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert response.status_code == 404
+    assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
+
+
 @pytest.mark.run(order=25)
 def test_login_with_correct_credentials(test_client, app_context, create_test_users_and_advs):
     with app_context:
