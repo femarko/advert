@@ -202,7 +202,7 @@ class FakeBaseRepo:
     def execute_adding(self):
         for item in self.temp_added:
             if not item.id:
-                item.id = random.randint(1, 9)
+                item.id = 1
             if not item.creation_date:
                 item.creation_date = datetime.datetime(1900, 1, 1)
             self.instances.add(item)
