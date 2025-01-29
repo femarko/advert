@@ -33,8 +33,8 @@ from app import service_layer
 from app.models import Advertisement, AdvertisementColumns
 
 
-def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo,
-                       fake_validate_func, fake_hash_pass_func, test_date):
+def test_get_user_data_returns_200(fake_check_current_user_func, fake_unit_of_work, fake_users_repo, fake_advs_repo,
+                                   fake_validate_func, fake_hash_pass_func, test_date):
     user_data = {
         "name": "test_name", "email": "test_email@test.com", "password": "test_pass", "creation_date": test_date
     }
@@ -53,6 +53,13 @@ def test_get_user_data(fake_check_current_user_func, fake_unit_of_work, fake_use
         "creation_date": test_date.isoformat()
     }
     assert result == expected_result
+
+
+def test_get_user_data_raises_not_found_error(fake_check_current_user_func, fake_users_repo, fake_unit_of_work):
+    fake_uow = fake_unit_of_work(users=fake_users_repo([]))
+    with pytest.raises(expected_exception=app.errors.NotFoundError) as e:
+        service_layer.get_user_data(user_id=1, check_current_user_func=fake_check_current_user_func,uow=fake_uow)
+    assert e.value.message == "The user with the provided parameters is not found."
 
 
 def test_create_user(

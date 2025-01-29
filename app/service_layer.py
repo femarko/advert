@@ -43,7 +43,10 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     current_user_id: int = check_current_user_func(user_id=user_id, get_cuid=True)
     with uow:
         user = uow.users.get(current_user_id)
-    return services.get_params(model=user)
+    user_params: dict[str, str | int] = services.get_params(model=user)
+    if user_params:
+        return user_params
+    raise app.errors.NotFoundError(message_prefix="The user")
 
 
 def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
