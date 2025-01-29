@@ -45,8 +45,8 @@ def get_user_data(user_id: int) -> tuple[Response, int]:
         return jsonify(user_data), 200
     except app.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.NotFoundError:
-        raise HttpError(status_code=404, description=f"User is not found.")
+    except app.errors.NotFoundError as e:
+        raise HttpError(status_code=404, description=e.message)
 
 
 @adv.route("/users/", methods=["POST"])
@@ -97,6 +97,8 @@ def get_related_advs(user_id: int):
         raise HttpError(status_code=403, description="Unavailable operation.")
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
+    except app.errors.NotFoundError as e:
+        raise HttpError(status_code=404, description=e.message)
 
 
 @adv.route("/users/<int:user_id>/", methods=["DELETE"])
