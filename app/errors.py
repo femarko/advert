@@ -2,8 +2,12 @@ from typing import Optional
 
 
 class NotFoundError(Exception):
-    def __init__(self, message_prefix: Optional[str] = ""):
-        self.base_message = " with the provided parameters is not found."
+    def __init__(
+            self,
+            base_message: Optional[str] = " with the provided parameters is not found.",
+            message_prefix: Optional[str] = ""
+    ):
+        self.base_message = base_message
         self.message = message_prefix + self.base_message
 
 
