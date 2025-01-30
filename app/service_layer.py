@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 import app.authentication
 from app import models, adv, validation, pass_hashing, services
 from app.error_handlers import HttpError
-from app.errors import NotFoundError, ValidationError, AccessDeniedError, FailedToGetResultError, CurrentUserError, \
+from app.errors import NotFoundError, ValidationError, AccessDeniedError, CurrentUserError, \
     AlreadyExistsError
 from app.repository.filtering import get_list_or_paginated_data
 
@@ -229,18 +229,19 @@ def delete_adv(adv_id: int, get_auth_user_id_func: Callable, uow) -> dict[str, s
 #         raise CurrentUserError
 
 
-def jwt_auth(validate_func: Callable,
-             check_pass_func: Callable[..., bool],
-             grant_access_func: Callable,
-             credentials: dict,
-             uow) -> str:
+def jwt_auth(validate_func: Callable, check_pass_func: Callable[..., bool], grant_access_func: Callable,
+             credentials: dict, uow) -> str:
+    validated_data = validate_func(**credentials)
+    with uow:
+        list_of_users: list[User] = uow.users.get_list_or_paginated_data(
+            filter_type=FilterTypes.COLUMN_VALUE, comparison=Comparison.IS, column=UserColumns.EMAIL,
+            column_value=validated_data[UserColumns.EMAIL]
+        )
     try:
-        validated_data = validate_func(**credentials)
-        user: User = \
-            get_users_list(column=UserColumns.EMAIL, column_value=validated_data[UserColumns.EMAIL], uow=uow)[0]
-        if check_pass_func(password=validated_data["password"], hashed_password=user.password):
-            access_token: str = grant_access_func(identity=user.id)
-            return access_token
-        raise app.errors.AccessDeniedError
+        user: User = list_of_users[0]
     except IndexError:
         raise app.errors.AccessDeniedError
+    if check_pass_func(password=validated_data["password"], hashed_password=user.password):
+        access_token: str = grant_access_func(identity=user.id)
+        return access_token
+    raise app.errors.AccessDeniedError
