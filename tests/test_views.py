@@ -486,10 +486,9 @@ def test_delete_user_returns_200(clear_db_before_and_after_test, test_client, ac
     assert response_for_related_adv.json == {"errors": "The related advertisements are not found."}
 
 
-# todo: rewrite
-def test_delete_user_returns_status_403_when_current_user_check_fails(test_client, session_maker, access_token):
+def test_delete_user_returns_status_403_when_current_user_check_fails(test_client, access_token):
     response = test_client.delete("http://127.0.0.1:5000/users/1000/",
-                                  headers={"Authorization": f"Bearer {access_token['user_1001']}"})
+                                  headers={"Authorization": f"Bearer {access_token}"})
     assert response.status_code == 403
     assert response.json == {"errors": "Unavailable operation."}
 
@@ -550,41 +549,25 @@ def test_delete_adv_returns_404_when_adv_is_not_found(
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
-# todo: rewrite with test_service_layer fixtures
-def test_login_with_correct_credentials(test_client, app_context, create_test_users_and_advs):
-    with app_context:
-        response = test_client.post("http://127.0.0.1:5000/login/",
-                                    json={"email": "test_filter_1000@email.com", "password": "test_filter_1000_pass"})
+def test_login_returns_200(test_client, create_user_through_http, test_user_data):
+    response = test_client.post("http://127.0.0.1:5000/login/", json=test_user_data)
     assert response.status_code == 200
     assert response.json["access_token"]
     assert type(response.json["access_token"]) == str
     assert len(response.json["access_token"]) >= 32
 
 
-# todo: rewrite
-@pytest.mark.parametrize(
-    "input_data",
-    (
-            {"email": "incorrect@email.com", "password": "incorrect_password"},
-            {"email": "test_2@email.com", "password": "incorrect_password"},
-            {"email": "incorrect@email.com", "password": "incorrect_password"}
-    )
-)
-def test_login_with_incorrect_credentials(test_client, app_context, input_data):
-    response = test_client.post("http://127.0.0.1:5000/login/", json=input_data)
+def test_login_returns_401_when_user_with_the_provided_credentials_is_not_found(test_client):
+    wrong_credentials = {"email": "does_not@exist.com", "password": "does_not_exist_pass"}
+    response = test_client.post("http://127.0.0.1:5000/login/", json=wrong_credentials)
     assert response.status_code == 401
     assert response.json == {"errors": "Invalid credentials."}
 
 
-# todo: rewrite, possibly
 @pytest.mark.parametrize(
-    "input_data, missed_field",
-    (
-            ({"password": "password"}, "email"),
-            ({"email": "test_2@email.com"}, "password")
-    )
+    "input_data, missed_field", (({"password": "password"}, "email"), ({"email": "test_2@email.com"}, "password"))
 )
-def test_login_with_incomplete_credentials(test_client, input_data, missed_field):
+def test_login_returns_400_when_incomplete_credentials_passed(test_client, input_data, missed_field):
     response = test_client.post("http://127.0.0.1:5000/login/", json=input_data)
     assert response.status_code == 400
     assert response.json == {
