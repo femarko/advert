@@ -20,10 +20,6 @@ class AccessDeniedError(Exception):
         self.message = message
 
 
-class FailedToGetResultError(Exception):
-    pass
-
-
 class CurrentUserError(Exception):
     def __init__(self, message: Optional[str] = "Unavailable operation."):
         self.message = message
