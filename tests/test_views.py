@@ -284,14 +284,27 @@ def test_get_related_advs_returns_200(
                              "total_pages": 1}
 
 
-def test_get_related_advs_returns_200_when_page_number_is_out_of_range(
-        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http):
+def test_get_related_advs_returns_200_when_page_value_exceeds_total_page_number(
+        clear_db_before_and_after_test, test_client, access_token, create_adv_through_http, test_adv_params
+):
+    page = 100
     response = test_client.get(
-        "http://127.0.0.1:5000/users/1/advertisements?page=100", headers={"Authorization": f"Bearer {access_token}"}
+        f"http://127.0.0.1:5000/users/1/advertisements?page={page}", headers={"Authorization": f"Bearer {access_token}"}
     )
+    adv_params_from_repo: dict[str, str | int] = test_client.get(
+        "http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
+    ).json
+    expected = {
+        **test_adv_params, "id": adv_params_from_repo["id"], "creation_date": adv_params_from_repo["creation_date"],
+        "user_id": adv_params_from_repo["user_id"]
+    }
     assert response.status_code == 200
-    assert response.json == {"items": [],
-                             "page": 100,
+    assert response.json == {"items": [{"id": expected["id"],
+                                        "title": expected["title"],
+                                        "description": expected["description"],
+                                        "creation_date": expected["creation_date"],
+                                        "user_id": expected["user_id"]}],
+                             "page": 1,
                              "per_page": 10,
                              "total": 1,
                              "total_pages": 1}
