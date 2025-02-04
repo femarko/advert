@@ -177,7 +177,7 @@ def search_advs_by_text():
             per_page=request.args.get("per_page")
         )
     except app.errors.ValidationError as e:
-        raise HttpError(status_code=400, description=str(e))
+        raise HttpError(status_code=400, description=str(e.message))
     return paginated_result, 200
 
 
