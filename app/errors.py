@@ -12,7 +12,8 @@ class NotFoundError(Exception):
 
 
 class ValidationError(Exception):
-    pass
+    def __init__(self, message):
+        self.message = message
 
 
 class AccessDeniedError(Exception):

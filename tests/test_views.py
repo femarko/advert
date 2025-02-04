@@ -562,7 +562,7 @@ def test_delete_adv_returns_404_when_adv_is_not_found(
     assert response.json == {"errors": "The advertisement with the provided parameters is not found."}
 
 
-def test_login_returns_200(test_client, create_user_through_http, test_user_data):
+def test_login_returns_200(clear_db_before_and_after_test, test_client, create_user_through_http, test_user_data):
     response = test_client.post("http://127.0.0.1:5000/login/", json=test_user_data)
     assert response.status_code == 200
     assert response.json["access_token"]

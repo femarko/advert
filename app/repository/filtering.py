@@ -1,4 +1,7 @@
+import dataclasses
 import enum
+import typing
+
 import sqlalchemy
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,8 +19,8 @@ class InvalidFilterParams(Exception):
 
 
 class FilterTypes(str, enum.Enum):
-    COLUMN_VALUE = "column_value"
-    SEARCH_TEXT = "search_text"
+    COLUMN_VALUE = 'column_value'
+    SEARCH_TEXT = 'search_text'
 
 
 class Comparison(str, enum.Enum):
@@ -45,20 +48,36 @@ class ValidParams(enum.Enum):
     COMPARISON = [cmp.value for cmp in Comparison]
 
 
-# @dataclass
-# class QueryBase:
-#     # status: Literal["OK", "Failed"] = "OK"
-#     errors: set[str] | list[str] | None = None
+class ErrType(str, enum.Enum):
+    MISSING = "missing_params"
+    INVALID = "invalid_params"
 
 
-# @dataclass
-# class QueryResult(QueryBase):
-#     result: sqlalchemy.orm.Query | None = None
+@dataclass
+class ParamsValidation:
+    missing_params: list[str | Type[Params]]
+    invalid_params: dict[str, str | Type[Params]]
+    logs: set
+    valid_params: dict = dataclasses.field(default_factory=dict)
+    params_passed: Optional[dict] = None
+    info_types: tuple[ErrType] = (ErrType.MISSING, ErrType.INVALID)
 
+    def create_message(self) -> dict[str, list[str]]:
+        result_dict = dict()
+        for log in self.logs:
+            result_dict |= {"params_passed": self.params_passed, log: getattr(self, log)}
+        self.logs = set()
+        return result_dict
 
-# @dataclass
-# class FilterResult(QueryBase):
-#     result: list[ModelClass] | dict[str, int | list[ModelClass]] | None = None
+    def add_error_info(self, info_type: ErrType, info: str | dict):
+        attr = getattr(self, info_type)
+        match info_type:
+            case ErrType.MISSING as it:
+                attr.append(info)
+                self.logs.add(it)
+            case ErrType.INVALID as it:
+                attr |= info
+                self.logs.add(it)
 
 
 class Filter:
@@ -71,83 +90,96 @@ class Filter:
                             "<=": {"apply": "__le__", "explain": "Less than or equal to"},
                             ">": {"apply": "__gt__", "explain": "Greater than"},
                             ">=": {"apply": "__ge__", "explain": "Greater than or equal to"}}
-        self.query_filtered: Query | None = None
-        self.res_list: list | None = None
-        self.paginated: dict | None = None
-        self.page_default_value = 1
-        self.per_page_default_value = 10
-        self.errors: set[str] = set()
-
-    def _add_error(self,
-                   param: Params | None = None,
-                   invalid_value: Any = None,
-                   valid_values: list[Any] | dict[str, Any] | None = None,
-                   comment: str | None = None) -> None:
-        if invalid_value is None and not comment:
-            self.errors.add(f"Value for '{param}' is not found.")
-        elif comment:
-            self.errors.add(comment)
-        else:
-            self.errors.add(f"'{invalid_value}' is invalid value for '{param}'. Valid values: {valid_values}.")
+        self.query_filtered: Optional[Query] = None
+        self.res_list: Optional[list] = None
+        self.paginated: Optional[dict] = None
+        self.page_default_value: int = 1
+        self.per_page_default_value: int = 10
+        self.params_info = ParamsValidation(
+            missing_params=[], invalid_params={}, logs=set(), valid_params={
+                'model_class': ValidParams.MODEL_CLASS.value,
+                'filter_type': ValidParams.FILTER_TYPE.value,
+                'column': list(set(ValidParams.COLUMN_USER.value + ValidParams.COLUMN_ADV.value)),
+                ModelClasses.USER.value: ValidParams.COLUMN_USER.value,
+                ModelClasses.ADV.value: ValidParams.COLUMN_ADV.value,
+                'comparison': ValidParams.COMPARISON.value
+            }
+        )
 
     def _validate_params(self, data: dict[str, Any], params: Type[Params]) -> None:
-        data_dict = {}
+        self.params_info.params_passed = data
+        params_dict = {}
         for param in params:
-            data_dict |= {param.value: data.get(param.value)}  # type: ignore
-        if data_dict[Params.MODEL_CLASS] not in [mc.value for mc in ModelClasses]:
-            self._add_error(Params.MODEL_CLASS, data_dict[Params.MODEL_CLASS], ValidParams.MODEL_CLASS.value)
-        if data_dict[Params.FILTER_TYPE] not in ValidParams.FILTER_TYPE.value:
-            self._add_error(Params.FILTER_TYPE, data_dict[Params.FILTER_TYPE], ValidParams.FILTER_TYPE.value)
-        if data_dict[Params.COLUMN] not in set(ValidParams.COLUMN_USER.value + ValidParams.COLUMN_ADV.value) \
-                and data_dict[Params.MODEL_CLASS] not in [mc.value for mc in ModelClasses]:
-            self._add_error(
-                Params.COLUMN, data_dict[Params.COLUMN], {f"for {User}": ValidParams.COLUMN_USER.value,
-                                                          f"for {Advertisement}": ValidParams.COLUMN_ADV.value}
-            )
-        if data_dict[Params.COMPARISON] not in ValidParams.COMPARISON.value \
-                and data_dict[Params.FILTER_TYPE] != FilterTypes.SEARCH_TEXT:
-            self._add_error(Params.COMPARISON, data_dict[Params.COMPARISON], ValidParams.COMPARISON.value)
-        match data_dict[Params.COLUMN], data_dict[Params.COLUMN_VALUE]:
-            case column, column_value if \
-                    column in [UserColumns.ID, AdvertisementColumns.ID, AdvertisementColumns.USER_ID] \
-                    and ((type(column_value) is str and not column_value.isdigit()) and type(column_value) is not int):
-                self._add_error(comment=f"'{column}' must be a digit.")
-            case column, column_value if \
-                    column in [UserColumns.CREATION_DATE, AdvertisementColumns.CREATION_DATE] \
-                    and type(column_value) is str:
+            if param not in self.params_info.params_passed.keys():
+                self.params_info.add_error_info(info_type=ErrType.MISSING.value, info=f'{param.value}')  # type: ignore
+            params_dict |= {param.value: data.get(param.value)}  # type: ignore
+        for param_name, param_value in params_dict.items():
+            if param_value and param_name != Params.COLUMN_VALUE and not (
+              param_name == Params.COMPARISON and params_dict.get(Params.FILTER_TYPE.value) == FilterTypes.SEARCH_TEXT
+            ):
+                if param_value not in self.params_info.valid_params.get(param_name):
+                    self.params_info.add_error_info(
+                        info_type=ErrType.INVALID.value,
+                        info={
+                            param_name: f'Valid values are: {self.params_info.valid_params[param_name]}'
+                        }
+                    )
+        match params_dict:
+            case {Params.COLUMN.value: c, Params.COLUMN_VALUE.value: cv, Params.FILTER_TYPE.value: ft} if \
+              ft == FilterTypes.COLUMN_VALUE and \
+              c in [UserColumns.ID, AdvertisementColumns.ID, AdvertisementColumns.USER_ID] and \
+              (isinstance(cv, str) and not cv.isdigit() and not isinstance(cv, int)):
+                self.params_info.add_error_info(
+                    info_type=ErrType.INVALID.value,
+                    info={Params.COLUMN_VALUE.value: f'When "{Params.COLUMN.value}" is "{c}", '
+                                                     f'"{Params.COLUMN_VALUE.value}" must be a digit.'}
+                )
+            case {Params.COLUMN.value: c, Params.COLUMN_VALUE.value: cv, Params.FILTER_TYPE: ft} if \
+                    c in [UserColumns.CREATION_DATE, AdvertisementColumns.CREATION_DATE] and \
+                    ft == FilterTypes.COLUMN_VALUE:
                 try:
-                    datetime.strptime(column_value, "%Y-%m-%d")
+                    datetime.strptime(cv, "%Y-%m-%d")
                 except (ValueError, TypeError):
-                    self._add_error(comment=f"When {column=}, '{Params.COLUMN_VALUE}' must be a date string "
-                                            f"of the following format: 'YYYY-MM-DD'.")
-            case column, column_value if column in [UserColumns.CREATION_DATE, AdvertisementColumns.CREATION_DATE] \
-                    and type(column_value) is not str:
-                self._add_error(comment=f"When {column=}, '{Params.COLUMN_VALUE}' must be a date string "
-                                        f"of the following format: 'YYYY-MM-DD'.")
-            case *_, :
-                pass
-        match data_dict[Params.FILTER_TYPE], data_dict[Params.COLUMN], data_dict[Params.COMPARISON]:
-            case filter_type, column, comparison if filter_type == FilterTypes.COLUMN_VALUE and column in \
-                    [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]\
-                    and comparison in [Comparison.LE, Comparison.LT, Comparison.GE, Comparison.GT]:
-                self._add_error(Params.COMPARISON, comparison, [Comparison.IS.value, Comparison.NOT.value])
-            case filter_type, column, _ if filter_type == FilterTypes.SEARCH_TEXT and column not in \
+                    self.params_info.add_error_info(
+                        info_type=ErrType.INVALID.value,
+                        info={
+                            Params.COLUMN_VALUE.value: f'When "{Params.COLUMN.value}" is "{c}", '
+                                                       f'"{Params.COLUMN_VALUE.value}" must be a date string of the '
+                                                       f'following format: "YYYY-MM-DD".'
+                        }
+                    )
+            case {Params.FILTER_TYPE: Params.COLUMN_VALUE, Params.COLUMN: c, Params.COMPARISON: cmp} if \
+                    cmp in [Comparison.LE, Comparison.LT, Comparison.GE, Comparison.GT] and c in \
                     [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]:
-                self._add_error(comment=f"For {filter_type=} the folowing columns are available: "
-                                        f"{{for {User}: [{UserColumns.NAME}, {UserColumns.EMAIL}], "
-                                        f"for {Advertisement}: "
-                                        f"[{AdvertisementColumns.TITLE}, {AdvertisementColumns.DESCRIPTION}]}}")
-            case *_, :
-                pass
-        match data_dict[Params.COLUMN], data_dict[Params.MODEL_CLASS]:
-            case column, model_class if model_class == User and column not in ValidParams.COLUMN_USER.value:
-                self._add_error(Params.COLUMN, column, ValidParams.COLUMN_USER.value)
-            case column, model_class if model_class == Advertisement and column not in ValidParams.COLUMN_ADV.value:
-                self._add_error(Params.COLUMN, column, ValidParams.COLUMN_ADV.value)
-            case *_, :
-                pass
-        if self.errors:
-            raise app.errors.ValidationError(list(self.errors))
+                self.params_info.add_error_info(
+                    info_type=ErrType.INVALID.value,
+                    info={Params.COMPARISON.value: f'When "{Params.FILTER_TYPE.value} is "{Params.COLUMN_VALUE.value}",'
+                                                   f' valid values for "{Params.COMPARISON.value}" are: '
+                                                   f'{[Comparison.IS.value, Comparison.NOT.value]}'}
+                )
+            case {Params.FILTER_TYPE: FilterTypes.SEARCH_TEXT, Params.COLUMN: c, Params.MODEL_CLASS: mc} if c not in \
+                    [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]:
+                available_columns = []
+                match mc:
+                    case ModelClasses.USER.value: available_columns = [UserColumns.NAME.value, UserColumns.EMAIL.value]
+                    case ModelClasses.ADV.value: available_columns = [
+                        AdvertisementColumns.TITLE.value, AdvertisementColumns.DESCRIPTION.value
+                    ]
+                self.params_info.add_error_info(
+                    info_type=ErrType.INVALID.value,
+                    info={Params.COLUMN.value: f'For model class "{mc}" text search is available '
+                                               f'in the following columns: {available_columns}.'}
+                )
+            case {Params.MODEL_CLASS.value: mc, Params.COLUMN: c} if \
+                    mc == ModelClasses.USER.value and c not in ValidParams.COLUMN_USER.value or \
+                    mc == ModelClasses.ADV.value and c not in ValidParams.COLUMN_ADV.value:
+                self.params_info.add_error_info(
+                    info_type=ErrType.INVALID.value,
+                    info={Params.COLUMN.value: f'For model class "{mc}" valid values for "{Params.COLUMN.value}" are: '
+                                               f'{self.params_info.valid_params[mc]}.'}
+                )
+        if self.params_info.logs:
+            raise app.errors.ValidationError(message=self.params_info.create_message())
 
     def _check_page_and_per_page(self, page: Any, per_page: Any) -> dict[Literal["page", "per_page"], int]:
         params_dict = {"page": page, "per_page": per_page}
