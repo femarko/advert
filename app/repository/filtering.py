@@ -111,7 +111,13 @@ class Filter:
         params_dict = {}
         for param in params:
             if param not in self.params_info.params_passed.keys():
-                self.params_info.add_error_info(info_type=ErrType.MISSING.value, info=f'{param.value}')  # type: ignore
+                if not(
+                        param == Params.COMPARISON and
+                        self.params_info.params_passed.get(Params.FILTER_TYPE) == FilterTypes.SEARCH_TEXT
+                ):
+                    self.params_info.add_error_info(
+                        info_type=ErrType.MISSING.value, info=f'{param.value}'  # type: ignore
+                    )
             params_dict |= {param.value: data.get(param.value)}  # type: ignore
         for param_name, param_value in params_dict.items():
             if param_value and param_name != Params.COLUMN_VALUE and not (

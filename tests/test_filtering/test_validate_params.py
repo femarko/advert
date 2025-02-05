@@ -2,7 +2,37 @@ import pytest
 
 import app.errors
 from app.repository.filtering import Filter, Params
-from app.models import Advertisement, User
+from app.models import Advertisement, User, ModelClasses
+
+
+def test_validate_params_does_not_raise_validation_error_when_all_params_are_correct():
+    data = {"model_class": Advertisement, "filter_type": "column_value", "comparison": ">=", "column": "id",
+            "column_value": "1000"}
+    filter_instance = Filter("fake_session")
+    filter_instance._validate_params(data=data, params=Params)
+    assert filter_instance.params_info.logs == set()
+    assert filter_instance.params_info.missing_params == []
+    assert filter_instance.params_info.invalid_params == {}
+
+
+@pytest.mark.parametrize(
+    "data", (
+            {"model_class": Advertisement, "filter_type": "search_text", "column": "description",
+             "column_value": "test"},
+            {"model_class": User, "filter_type": "search_text", "comparison": "INVALID", "column": "name",
+             "column_value": "test"},
+            {"model_class": Advertisement, "filter_type": "search_text", "comparison": ">=", "column": "description",
+             "column_value": "test"}
+    )
+)
+def test_validate_params_does_not_raise_error_when_filter_type_is_search_text_and_comparison_is_missing_or_invalid(
+        data
+):
+    filter_instance = Filter("fake_session")
+    filter_instance._validate_params(data=data, params=Params)
+    assert filter_instance.params_info.logs == set()
+    assert filter_instance.params_info.missing_params == []
+    assert filter_instance.params_info.invalid_params == {}
 
 
 def test_validate_params_raises_validation_error_when_model_class_is_missing_and_comparison_is_invalid():
@@ -21,7 +51,7 @@ def test_validate_params_raises_validation_error_when_filter_type_is_search_text
     with pytest.raises(app.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert e.value.message["params_passed"] == data
-    assert e.value.message.get("missing_params") == ['comparison']
+    assert e.value.message.get("missing_params") is None
     assert e.value.message["invalid_params"] == {
         'column': 'For model class "<class \'app.models.User\'>" text search is available '
                   'in the following columns: [\'name\', \'email\'].'
@@ -128,6 +158,29 @@ def test_validate_params_raises_validation_error_when_all_params_are_missing():
     assert e.value.message.get("invalid_params") is None
 
 
+def test_validate_params_raises_validation_error_when_all_params_are_invalid():
+    data = {
+        "model_class": "INVALID", "filter_type": "INVALID", "column": "INVALID", "column_value": "INVALID",
+        "comparison": "INVALID"
+    }
+    with pytest.raises(app.errors.ValidationError) as e:
+        Filter("fake_session")._validate_params(data=data, params=Params)
+    assert e.value.message["params_passed"] == data
+    assert e.value.message.get("missing_params") is None
+    assert set(e.value.message["invalid_params"]["model_class"]) == set(
+        "Valid values are: [<class ""'app.models.User'>, " f"<class 'app.models.Advertisement'>]"
+    )
+    assert set(e.value.message["invalid_params"]["filter_type"]) == set(
+        "Valid values are: ['column_value', 'search_text']"
+    )
+    assert set(e.value.message["invalid_params"]["column"]) == set(
+        "Valid values are: ['description', 'creation_date', 'user_id', 'name', 'email', 'id', 'title']"
+    )
+    assert set(e.value.message["invalid_params"]["comparison"]) == set(
+        "Valid values are: ['is', 'is_not', '<', '>', '>=', '<=']"
+    )
+
+
 def test_validate_params_raises_validationerr_ignores_comparison_when_filter_type_is_search_text_and_column_is_wrong_():
     data = {
         "model_class": Advertisement, "filter_type": "search_text", "column": "wrong", "column_value": "2025-01-01",
@@ -143,63 +196,19 @@ def test_validate_params_raises_validationerr_ignores_comparison_when_filter_typ
     }
 
 
-# @pytest.mark.parametrize(
-#     "params",
-#     ({"model_class": User, "filter_type": "column_value", "comparison": "wrong_param"#, "column": "id",
-#       # "column_value": "1000"
-#       },
-#      # {"model_class": Advertisement,
-#      #  "filter_type": "column_value",
-#      #  "comparison": ">=",
-#      #  "column": "id",
-#      #  "column_value": "1000"},
-#      # {"model_class": User, "filter_type": "search_text", "column": "name", "column_value": "test"},
-#      # {"model_class": Advertisement, "filter_type": "search_text", "column": "description", "column_value": "test"},
-#      # {"model_class": User, "filter_type": "search_text", "comparison": ">=", "column": "name", "column_value": "test"},
-#      # {"model_class": Advertisement,
-#      #  "filter_type": "search_text",
-#      #  "comparison": ">=",
-#      #  "column": "description",
-#      #  "column_value": "test"}
-#      )
-# )
-# def test_filter_validate_params_with_correct_params(fake_session, params):
-#     filter_object = Filter(session=fake_session)
-#     filter_object._validate_params(data=params, params=Params)
-#     assert filter_object.errors == set()
-#
-#
-# def test_all_params_are_wrong(fake_session):
-#     data = {"model_class": "wrong_param",
-#             "filter_type": "wrong_param",
-#             "comparison": "wrong_param",
-#             "column": "wrong_param",
-#             "column_value": "wrong_param"}
-#     filter_object = Filter(session=fake_session)
-#     filter_object._validate_params(data=data, params=Params)
-#     assert filter_object.errors == {
-#         f"'wrong_param' is invalid value for 'model_class'. Valid values: "
-#         f"[<class 'app.models.User'>, <class 'app.models.Advertisement'>].",
-#         f"'wrong_param' is invalid value for 'filter_type'. Valid values: ['column_value', 'search_text'].",
-#         f"'wrong_param' is invalid value for 'comparison'. "
-#         f"Valid values: ['is', 'is_not', '<', '>', '>=', '<='].",
-#         f'\'wrong_param\' is invalid value for \'column\'. Valid values: '
-#         f'{{"for <class \'app.models.User\'>": [\'id\', \'name\', \'email\', \'creation_date\'], '
-#         f'"for <class \'app.models.Advertisement\'>": '
-#         f'[\'id\', \'title\', \'description\', \'creation_date\', \'user_id\']}}.'
-#     }
-#
-#
-# def test_all_params_are_missing(fake_session):
-#     data = {}
-#     filter_object = Filter(session=fake_session)
-#     filter_object.validate_params(data=data, params=Params)
-#     assert filter_object.errors == {f"Value for 'model_class' is not found.",
-#                                     f"Value for 'filter_type' is not found.",
-#                                     f"Value for 'comparison' is not found.",
-#                                     f"Value for 'column' is not found."}
-#
-#
+# def test_validate_params_raises_validationerr_when_():
+#     data = {"model_class": Advertisement, "filter_type": "search_text", "comparison": ">=", "column": "description", "column_value": "test"}
+#     with pytest.raises(app.errors.ValidationError) as e:
+#         Filter("fake_session")._validate_params(data=data, params=Params)
+#     assert e.value.message["params_passed"] == data
+    # assert e.value.message.get("missing_params") is None
+    # assert e.value.message.get("invalid_params") == {
+    #     'column': f'For model class "<class \'app.models.Advertisement\'>" text search is available '
+    #               f'in the following columns: [\'title\', \'description\'].'
+    # }
+
+
+
 # def test_all_params_are_empty_strings():
 #     data = {"model_class": "",
 #             "filter_type": "",
