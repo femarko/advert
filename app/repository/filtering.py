@@ -159,7 +159,7 @@ class Filter:
                     [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]:
                 self.params_info.add_error_info(
                     info_type=ErrType.INVALID.value,
-                    info={Params.COMPARISON.value: f'When "{Params.FILTER_TYPE.value} is "{Params.COLUMN_VALUE.value}",'
+                    info={Params.COMPARISON.value: f'When "{Params.FILTER_TYPE.value}" is "{Params.COLUMN_VALUE.value}",'
                                                    f' valid values for "{Params.COMPARISON.value}" are: '
                                                    f'{[Comparison.IS.value, Comparison.NOT.value]}'}
                 )
