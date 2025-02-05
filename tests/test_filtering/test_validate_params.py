@@ -158,11 +158,16 @@ def test_validate_params_raises_validation_error_when_all_params_are_missing():
     assert e.value.message.get("invalid_params") is None
 
 
-def test_validate_params_raises_validation_error_when_all_params_are_invalid():
-    data = {
-        "model_class": "INVALID", "filter_type": "INVALID", "column": "INVALID", "column_value": "INVALID",
-        "comparison": "INVALID"
-    }
+@pytest.mark.parametrize(
+    "data",
+    (
+            {"model_class": "INVALID", "filter_type": "INVALID", "column": "INVALID", "column_value": "INVALID",
+             "comparison": "INVALID"},
+            {"model_class": "", "filter_type": "", "comparison": "", "column": "", "column_value": ""},
+    )
+)
+def test_validate_params_raises_validation_error_when_all_params_are_invalid(data):
+
     with pytest.raises(app.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert e.value.message["params_passed"] == data
@@ -201,20 +206,15 @@ def test_validate_params_raises_validationerr_ignores_comparison_when_filter_typ
 #     with pytest.raises(app.errors.ValidationError) as e:
 #         Filter("fake_session")._validate_params(data=data, params=Params)
 #     assert e.value.message["params_passed"] == data
-    # assert e.value.message.get("missing_params") is None
-    # assert e.value.message.get("invalid_params") == {
-    #     'column': f'For model class "<class \'app.models.Advertisement\'>" text search is available '
-    #               f'in the following columns: [\'title\', \'description\'].'
-    # }
-
+#     assert e.value.message.get("missing_params") is None
+#     assert e.value.message.get("invalid_params") == {
+#         'column': f'For model class "<class \'app.models.Advertisement\'>" text search is available '
+#                   f'in the following columns: [\'title\', \'description\'].'
+#     }
 
 
 # def test_all_params_are_empty_strings():
-#     data = {"model_class": "",
-#             "filter_type": "",
-#             "comparison": "",
-#             "column": "",
-#             "column_value": ""}
+#     data =
 #     filter_object = Filter(session=fake_session)
 #     filter_object.validate_params(data=data, params=Params)
 #     assert filter_object.errors == {

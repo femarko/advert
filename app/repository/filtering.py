@@ -120,7 +120,7 @@ class Filter:
                     )
             params_dict |= {param.value: data.get(param.value)}  # type: ignore
         for param_name, param_value in params_dict.items():
-            if param_value and param_name != Params.COLUMN_VALUE and not (
+            if param_value is not None and param_name != Params.COLUMN_VALUE and not (
               param_name == Params.COMPARISON and params_dict.get(Params.FILTER_TYPE.value) == FilterTypes.SEARCH_TEXT
             ):
                 if param_value not in self.params_info.valid_params.get(param_name):
