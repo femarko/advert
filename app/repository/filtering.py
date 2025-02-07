@@ -100,8 +100,12 @@ class Filter:
                 'model_class': ValidParams.MODEL_CLASS.value,
                 'filter_type': ValidParams.FILTER_TYPE.value,
                 'column': list(set(ValidParams.COLUMN_USER.value + ValidParams.COLUMN_ADV.value)),
-                ModelClasses.USER.value: ValidParams.COLUMN_USER.value,
-                ModelClasses.ADV.value: ValidParams.COLUMN_ADV.value,
+                ModelClasses.USER.value.__name__ + "_columns": ValidParams.COLUMN_USER.value,
+                ModelClasses.ADV.value.__name__ + "_columns": ValidParams.COLUMN_ADV.value,
+                ModelClasses.USER.value.__name__ + "_text_columns": [UserColumns.NAME.value, UserColumns.EMAIL.value],
+                ModelClasses.ADV.value.__name__ + "_text_columns": [
+                        AdvertisementColumns.TITLE.value, AdvertisementColumns.DESCRIPTION.value
+                    ],
                 'comparison': ValidParams.COMPARISON.value
             }
         )
@@ -164,25 +168,26 @@ class Filter:
                                                    f'{[Comparison.IS.value, Comparison.NOT.value]}'}
                 )
             case {Params.FILTER_TYPE: FilterTypes.SEARCH_TEXT, Params.COLUMN: c, Params.MODEL_CLASS: mc} if c not in \
-                    [UserColumns.NAME, UserColumns.EMAIL, AdvertisementColumns.TITLE, AdvertisementColumns.DESCRIPTION]:
-                available_columns = []
-                match mc:
-                    case ModelClasses.USER.value: available_columns = [UserColumns.NAME.value, UserColumns.EMAIL.value]
-                    case ModelClasses.ADV.value: available_columns = [
-                        AdvertisementColumns.TITLE.value, AdvertisementColumns.DESCRIPTION.value
-                    ]
+                    set(
+                        self.params_info.valid_params[ModelClasses.USER.value.__name__ + "_text_columns"] +
+                        self.params_info.valid_params[ModelClasses.ADV.value.__name__ + "_text_columns"]
+                    ):
                 self.params_info.add_error_info(
                     info_type=ErrType.INVALID.value,
-                    info={Params.COLUMN.value: f'For model class "{mc}" text search is available '
-                                               f'in the following columns: {available_columns}.'}
+                    info={
+                        Params.COLUMN.value: f'For model class "{mc.__name__}" text search is available in the '
+                                             f'following columns: '
+                                             f'{self.params_info.valid_params[mc.__name__ + "_text_columns"]}.'
+                    }
                 )
             case {Params.MODEL_CLASS.value: mc, Params.COLUMN: c} if \
                     mc == ModelClasses.USER.value and c not in ValidParams.COLUMN_USER.value or \
                     mc == ModelClasses.ADV.value and c not in ValidParams.COLUMN_ADV.value:
                 self.params_info.add_error_info(
                     info_type=ErrType.INVALID.value,
-                    info={Params.COLUMN.value: f'For model class "{mc}" valid values for "{Params.COLUMN.value}" are: '
-                                               f'{self.params_info.valid_params[mc]}.'}
+                    info={Params.COLUMN.value: f'For model class "{mc.__name__}" valid values for '
+                                               f'"{Params.COLUMN.value}" are: '
+                                               f'{self.params_info.valid_params[mc.__name__ + "_columns"]}.'}
                 )
         if self.params_info.logs:
             raise app.errors.ValidationError(message=self.params_info.create_message())
