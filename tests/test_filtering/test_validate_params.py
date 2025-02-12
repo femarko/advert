@@ -54,6 +54,17 @@ def test_validate_params_raises_validation_error_when_all_params_are_missing():
     }
 
 
+def test_validate_params_raises_validation_error_when_all_params_are_none():
+    data = {"model_class": None, "filter_type": None, "comparison": None, "column": None, "column_value": None}
+    with pytest.raises(app.errors.ValidationError) as e:
+        Filter("fake_session")._validate_params(data=data, params=Params)
+    assert set(e.value.message.keys()) == {"params_passed", "missing_params"}
+    assert e.value.message["params_passed"] == {}
+    assert set(e.value.message["missing_params"]) == {
+        'model_class', 'filter_type', 'column', 'column_value', 'comparison'
+    }
+
+
 def test_validate_params_raises_validation_error_when_filter_type_and_comparison_are_missing():
     data = {"model_class": User, "column": "id", "column_value": "text"}
     with pytest.raises(app.errors.ValidationError) as e:

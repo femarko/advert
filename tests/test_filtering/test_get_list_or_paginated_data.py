@@ -1,3 +1,5 @@
+import pytest
+import app.errors
 import app.repository.filtering
 from app import services, models
 
@@ -45,4 +47,50 @@ def test_get_list_or_paginated_data_returns_dict_when_all_params_are_correct_and
                 'creation_date': '1900-01-01T00:00:00'
             }
         ]
+    }
+
+
+def test_get_list_or_paginated_data_raises_error_when_invalid_params_are_passed(
+        session_maker, create_test_users_and_advs, test_date
+):
+    session = session_maker
+    with session() as s:
+        with pytest.raises(expected_exception=app.errors.ValidationError) as e:
+            app.repository.filtering.get_list_or_paginated_data(
+                session=s,
+                model_class="INVALID", filter_type="INVALID", comparison="INVALID", column="INVALID",  # type: ignore
+                column_value="INVALID"
+            )
+    assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
+    assert e.value.message["params_passed"] == {'model_class': 'INVALID',
+                                                'filter_type': 'INVALID',
+                                                'comparison': 'INVALID',
+                                                'column': 'INVALID',
+                                                'column_value': 'INVALID'}
+    assert set(e.value.message["invalid_params"].keys()) == {"model_class", "filter_type", "column", "comparison"}
+    assert set(e.value.message["invalid_params"]["model_class"]) == set(
+        "Valid values are: [<class 'app.models.User'>, <class 'app.models.Advertisement'>]"
+    )
+    assert set(e.value.message["invalid_params"]["filter_type"]) == set(
+        "Valid values are: ['column_value', 'search_text']"
+    )
+    assert set(e.value.message["invalid_params"]["column"]) == set(
+        "Valid values are: ['description', 'title', 'email', 'user_id', 'name', 'creation_date', 'id']"
+    )
+    assert set(e.value.message["invalid_params"]["comparison"]) == set(
+        "Valid values are: ['is', 'is_not', '<', '>', '>=', '<=']"
+    )
+
+
+def test_get_list_or_paginated_data_raises_error_when_all_params_are_missing(
+        session_maker, create_test_users_and_advs, test_date
+):
+    session = session_maker
+    with session() as s:
+        with pytest.raises(expected_exception=app.errors.ValidationError) as e:
+            app.repository.filtering.get_list_or_paginated_data(session=s)
+    assert set(e.value.message.keys()) == {"params_passed", "missing_params"}
+    assert e.value.message["params_passed"] == {}
+    assert set(e.value.message["missing_params"]) == {
+        "model_class", "filter_type", "column", "column_value", "comparison"
     }

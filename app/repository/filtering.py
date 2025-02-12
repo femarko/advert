@@ -64,6 +64,12 @@ class ParamsValidation:
 
     def create_message(self) -> dict[str, list[str]]:
         result_dict = dict()
+        none_values_keys = []
+        for key, value in self.params_passed.items():
+            if value is None:
+                none_values_keys.append(key)
+        for none_value_key in none_values_keys:
+            self.params_passed.pop(none_value_key)
         for log in self.logs:
             result_dict |= {"params_passed": self.params_passed, log: getattr(self, log)}
         self.logs = set()
@@ -114,7 +120,7 @@ class Filter:
         self.params_info.params_passed = data
         params_dict = {}
         for param in params:
-            if param not in self.params_info.params_passed.keys():
+            if param not in self.params_info.params_passed.keys() or self.params_info.params_passed.get(param) is None:
                 if not(
                         param == Params.COMPARISON and
                         self.params_info.params_passed.get(Params.FILTER_TYPE) == FilterTypes.SEARCH_TEXT
