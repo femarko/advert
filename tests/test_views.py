@@ -400,14 +400,20 @@ def test_search_advs_by_text_returns_400_when_invalid_params_passed(
 ):
     response = test_client .get("http://127.0.0.1:5000/advertisements?column=invalid_param")
     assert response.status_code == 400
-    assert response.json == {
-        'errors': '{\'params_passed\': {\'model_class\': <class \'app.models.Advertisement\'>, '
-                  '\'filter_type\': <FilterTypes.SEARCH_TEXT: \'search_text\'>, '
-                  '\'comparison\': <Comparison.IS: \'is\'>, '
-                  '\'column\': \'invalid_param\', '
-                  '\'column_value\': None}, '
-                  '\'invalid_params\': {\'column\': \'For model class "<class \\\'app.models.Advertisement\\\'>" '
-                  'text search is available in the following columns: [\\\'title\\\', \\\'description\\\'].\'}}'}
+    assert set(response.json["errors"]) == set(
+        "{"
+            "'params_passed': {'"
+                    "'model_class': <class 'app.models.Advertisement'>, "
+                    "'filter_type': <FilterTypes.SEARCH_TEXT: 'search_text'>, "
+                    "'comparison': <Comparison.IS: 'is'>, "
+                    "'column': 'invalid_param'"
+            "}, "
+             "'missing_params': ['column_value'], "
+             "'invalid_params': {"
+                    "'column': 'For model class \"Advertisement\" text search is available in the '"
+                    "following columns: [\\'title\\', \\'description\\'].'"
+        "}"
+    )
 
 
 def test_update_adv_returns_200(
