@@ -122,7 +122,7 @@ class Filter:
         for param in params:
             if param not in self.params_info.params_passed.keys() or self.params_info.params_passed.get(param) is None:
                 if not(
-                        param == Params.COMPARISON and
+                        (param == Params.COMPARISON or param == Params.COLUMN_VALUE) and
                         self.params_info.params_passed.get(Params.FILTER_TYPE) == FilterTypes.SEARCH_TEXT
                 ):
                     self.params_info.add_error_info(
