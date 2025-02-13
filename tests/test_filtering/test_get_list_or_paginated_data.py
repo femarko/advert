@@ -1,7 +1,9 @@
 import pytest
 import app.errors
+import app.repository
 import app.repository.filtering
 from app import services, models
+from app.models import User, Advertisement
 
 
 def test_get_list_or_paginated_data_returns_list_when_all_params_are_correct_and_paginate_is_omitted(
@@ -20,6 +22,80 @@ def test_get_list_or_paginated_data_returns_list_when_all_params_are_correct_and
                              "name": "test_filter_1000",
                              "email": "test_filter_1000@email.com",
                              "creation_date": test_date.isoformat()}
+
+
+@pytest.mark.parametrize(
+    "params",
+    ({"model_class": User, "filter_type": "column_value", "comparison": ">=", "column": "id", "column_value": "1000"},
+     {"model_class": Advertisement,
+      "filter_type": "column_value",
+      "comparison": ">=",
+      "column": "id",
+      "column_value": "1000"},
+     {"model_class": User, "filter_type": "search_text", "column": "name", "column_value": "st_f"},
+     {"model_class": Advertisement,
+      "filter_type": "search_text",
+      "column": "description",
+      "column_value": "st_f"},
+     {"model_class": User,
+      "filter_type": "search_text",
+      "comparison": ">=",
+      "column": "name",
+      "column_value": "st_f"},
+     {"model_class": Advertisement,
+      "filter_type": "search_text",
+      "comparison": ">=",
+      "column": "description",
+      "column_value": "st_f"},
+     {"model_class": User,
+      "filter_type": "column_value",
+      "column": "creation_date",
+      "column_value": "1900-01-01",
+      "comparison": "<="},
+     {"model_class": Advertisement,
+      "filter_type": "column_value",
+      "column": "creation_date",
+      "column_value": "1900-01-01",
+      "comparison": "<="},
+     {"model_class": User,
+      "filter_type": "search_text",
+      "column": "email",
+      "column_value": "st_f",
+      "comparison": ""},
+     {"model_class": Advertisement,
+      "filter_type": "search_text",
+      "column": "title",
+      "column_value": "ilt",
+      "comparison":""},
+     {"model_class": User,
+      "filter_type": "column_value",
+      "column": "id",
+      "column_value": "1000",
+      "comparison": ">="},
+     {"model_class": Advertisement,
+      "filter_type": "column_value",
+      "column": "user_id",
+      "column_value": "1000",
+      "comparison": ">="}))
+def test_get_list_or_paginated_data_returns_paginated_data_with_correct_params(
+        session_maker, create_test_users_and_advs, params, test_date
+):
+    session = session_maker
+    with session() as sess:
+        filter_result = app.repository.filtering.get_list_or_paginated_data(session=sess, paginate=True, **params)
+    assert filter_result["page"] == 1
+    assert filter_result["per_page"] == 10
+    assert filter_result["total_pages"] == 1
+    assert type(filter_result["items"]) == list
+    assert set([(item["creation_date"]) for item in filter_result["items"]]) == {test_date.isoformat()}
+    if params["model_class"] is User:
+        assert filter_result["total"] == 2
+        assert len(filter_result["items"]) == 2
+        assert set([item["id"] for item in filter_result["items"]]) == {1000, 1001}
+    else:
+        assert filter_result["total"] == 4
+        assert len(filter_result["items"]) == 4
+        assert set([item["id"] for item in filter_result["items"]]) == {1000, 1001, 1003, 1004}
 
 
 def test_get_list_or_paginated_data_returns_dict_when_all_params_are_correct_and_paginate_is_true(
