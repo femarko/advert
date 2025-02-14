@@ -2,10 +2,9 @@ import enum
 from datetime import datetime
 from typing import TypeVar, Optional
 
-from sqlalchemy import create_engine, Integer, String, DateTime, func, ForeignKey
-from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from app.error_handlers import HttpError
 
 POSTGRES_DSN = f"postgresql://adv:secret@127.0.0.1:5431/adv"
 engine = create_engine(POSTGRES_DSN)
@@ -16,7 +15,7 @@ class Base:
     pass
 
 
-class User:
+class User(Base):
     def __init__(
             self, name: str, email: str, password: str, id: Optional[int] = None,
             creation_date: Optional[datetime] = None
@@ -27,14 +26,8 @@ class User:
         self.password = password
         self.creation_date = creation_date
 
-    def get_params(self) -> dict[str, str | int | datetime]:
-        return {"id": self.id,
-                "name": self.name,
-                "email": self.email,
-                "creation_date": self.creation_date.isoformat()}
 
-
-class Advertisement:
+class Advertisement(Base):
     def __init__(
             self, title: str, description: str, user_id: int, id: Optional[int] = None,
             creation_date: Optional[datetime] = None
@@ -47,16 +40,6 @@ class Advertisement:
 
     def __repr__(self):
         return f'{self.title}\n{self.description}'
-
-    def get_params(self) -> dict[str, str | int]:
-        return {"id": self.id,
-                "title": self.title,
-                "description": self.description,
-                "creation_date": self.creation_date.isoformat(),
-                "user_id": self.user_id}
-
-    # def get_related_user(self):
-    #     return self.user.get_user_data()
 
 
 class Model(str, enum.Enum):
