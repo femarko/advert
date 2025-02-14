@@ -15,7 +15,7 @@ from app.unit_of_work import UnitOfWork
 #  todo: whether all urls have authorization check: if user_id == authentication.get_authenticated_user_identity(): ...
 #  todo: put all HttpErrors in views.py
 #  todo: process validation_result.validation_errors
-from app.validation import ValidationResult, PydanticModel
+# from app.validation import ValidationResult, PydanticModel
 
 
 # def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[str, str]], ValidationResult],
