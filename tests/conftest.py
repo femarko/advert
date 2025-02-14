@@ -4,13 +4,14 @@ from typing import Optional
 import pytest
 import sqlalchemy
 
+import app.orm.orm_initialization
 import app.pass_hashing, app.errors
 from app import adv, models, services, table_mapper
 
 
 @pytest.fixture(scope="session")
 def engine():
-    return sqlalchemy.create_engine(models.POSTGRES_DSN)
+    return sqlalchemy.create_engine(app.orm.orm_initialization.POSTGRES_DSN)
 
 
 @pytest.fixture

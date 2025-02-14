@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 
 import app.repository.repository
 import app.errors
-from app.models import session_maker
+from app.orm.orm_initialization import session_maker
 from app.repository.repository import RepoProto, UserRepository, AdvRepository
 
 
