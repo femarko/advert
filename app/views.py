@@ -1,5 +1,3 @@
-from typing import Callable, Any, Type
-
 from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required
 
@@ -8,31 +6,7 @@ import app.repository.filtering
 from app import adv, models, pass_hashing, validation, service_layer, authentication
 from app.error_handlers import HttpError
 
-from app.repository.repository import UserRepository, AdvRepository
-from app.models import Advertisement, User
 from app.unit_of_work import UnitOfWork
-
-#  todo: whether all urls have authorization check: if user_id == authentication.get_authenticated_user_identity(): ...
-#  todo: put all HttpErrors in views.py
-#  todo: process validation_result.validation_errors
-# from app.validation import ValidationResult, PydanticModel
-
-
-# def get_validation_result(validation_func: Callable[[Type[PydanticModel], dict[str, str]], ValidationResult],
-#                           validation_model: Type[PydanticModel],
-#                           data: dict[str, str]):
-#     validation_result = validation_func(validation_model, data)
-#     if validation_result.status == "OK":
-#         return validation_result.validated_data
-#     else:
-#         raise HttpError(status_code=400, description=validation_result.validation_errors)
-#
-#
-# def get_filter_result(filter_func: Callable, **params: Any):
-#     filter_result = filter_func(**params)
-#     if filter_result.status == "OK":
-#         return filter_result.result
-#     raise HttpError(status_code=400, description=filter_result.errors)
 
 
 @adv.route("/users/<int:user_id>/", methods=["GET"])
@@ -140,14 +114,6 @@ def create_adv():
         raise HttpError(status_code=403, description=e.message)
     except app.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-
-# todo: do I need this endpoint?
-# @adv.route("/advertisements/<int:adv_id>/user", methods=["GET"])
-# @jwt_required()
-# def get_related_user(adv_id: int):
-#     advertisement: models.Advertisement = service_layer.get_related_models(model_class=models.Advertisement,
-#                                                                            instance_id=adv_id)
-#     return advertisement.get_related_user(), 200
 
 
 @adv.route("/advertisements/<int:adv_id>/", methods=["PATCH"])
