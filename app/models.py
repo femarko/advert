@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from typing import TypeVar
+from typing import TypeVar, Optional
 
 from sqlalchemy import create_engine, Integer, String, DateTime, func, ForeignKey
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column, relationship
@@ -8,25 +8,24 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column,
 from app.error_handlers import HttpError
 
 POSTGRES_DSN = f"postgresql://adv:secret@127.0.0.1:5431/adv"
-
 engine = create_engine(POSTGRES_DSN)
-
 session_maker = sessionmaker(bind=engine)
 
 
-class Base(DeclarativeBase):
+class Base:
     pass
 
 
-class User(Base):
-    __tablename__ = "user"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
-    password: Mapped[str] = mapped_column(String(100), nullable=False, index=False)
-    creation_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    advertisements: Mapped[list["Advertisement"]] = relationship(back_populates="user", cascade="delete")
+class User:
+    def __init__(
+            self, name: str, email: str, password: str, id: Optional[int] = None,
+            creation_date: Optional[datetime] = None
+    ):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.password = password
+        self.creation_date = creation_date
 
     def get_params(self) -> dict[str, str | int | datetime]:
         return {"id": self.id,
@@ -34,19 +33,17 @@ class User(Base):
                 "email": self.email,
                 "creation_date": self.creation_date.isoformat()}
 
-    def get_user_advs(self) -> list[dict[str, str | int]]:
-        return [adv.get_adv_params() for adv in self.advertisements]
 
-
-class Advertisement(Base):
-    __tablename__ = "adv"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(200), unique=False, index=True, nullable=False)
-    description: Mapped[str] = mapped_column(index=True, unique=False, nullable=False)
-    creation_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
-    user: Mapped[User] = relationship(back_populates="advertisements")
+class Advertisement:
+    def __init__(
+            self, title: str, description: str, user_id: int, id: Optional[int] = None,
+            creation_date: Optional[datetime] = None
+    ):
+        self.id = id
+        self.title = title
+        self.description = description
+        self.user_id = user_id
+        self.creation_date = creation_date
 
     def __repr__(self):
         return f'{self.title}\n{self.description}'
@@ -58,8 +55,8 @@ class Advertisement(Base):
                 "creation_date": self.creation_date.isoformat(),
                 "user_id": self.user_id}
 
-    def get_related_user(self):
-        return self.user.get_user_data()
+    # def get_related_user(self):
+    #     return self.user.get_user_data()
 
 
 class Model(str, enum.Enum):
@@ -88,5 +85,3 @@ class UserColumns(str, enum.Enum):
 
 
 ModelClass = TypeVar("ModelClass", bound=Base)
-
-Base.metadata.create_all(bind=engine)

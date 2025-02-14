@@ -1,15 +1,9 @@
 from typing import Literal
-
 import pytest
-import sqlalchemy
-
 from datetime import datetime
 
-from flask_jwt_extended import verify_jwt_in_request
-
 import app.service_layer
-from app import models, pass_hashing, authentication, validation, service_layer, unit_of_work, errors, services
-from app.error_handlers import HttpError
+from app import pass_hashing, authentication, validation, service_layer, unit_of_work, table_mapper
 from app.models import User, Advertisement
 
 
@@ -48,6 +42,9 @@ def create_adv_through_http(test_adv_params, test_user_id, test_client, access_t
 @pytest.fixture
 def test_adv_id() -> Literal[1]:
     return 1
+
+
+app.table_mapper.start_mapping()
 
 
 def test_create_user(test_client, clear_db_before_and_after_test):
@@ -172,7 +169,9 @@ def test_create_adv_returns_401_when_user_is_not_authenticated(test_client, clea
     assert response.json == {"msg": "Missing Authorization Header"}
 
 
-def test_get_user_data_returns_200(clear_db_before_and_after_test, test_client, access_token, test_date, test_user_data):
+def test_get_user_data_returns_200(
+        clear_db_before_and_after_test, test_client, access_token, test_date, test_user_data
+):
     response = test_client.get(
         "http://127.0.0.1:5000/users/1/", headers={"Authorization": f"Bearer {access_token}"}
     )
@@ -559,9 +558,7 @@ def test_delete_adv_returns_403_when_user_has_no_authority(
     assert response.json == {"errors": "Unavailable operation."}
 
 
-def test_delete_adv_returns_404_when_adv_is_not_found(
-        clear_db_before_and_after_test, access_token, test_client
-):
+def test_delete_adv_returns_404_when_adv_is_not_found(clear_db_before_and_after_test, access_token, test_client):
     response = test_client.delete(
         f"http://127.0.0.1:5000/advertisements/1/", headers={"Authorization": f"Bearer {access_token}"}
     )

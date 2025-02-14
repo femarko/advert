@@ -6,7 +6,7 @@ import pytest
 import sqlalchemy
 
 import app.pass_hashing, app.errors
-from app import adv, models, services
+from app import adv, models, services, table_mapper
 
 
 @pytest.fixture(scope="session")
@@ -27,11 +27,15 @@ def drop_all_create_all(engine):
 
 @pytest.fixture
 def clear_db_before_and_after_test(engine):
-    models.Base.metadata.drop_all(bind=engine)
-    models.Base.metadata.create_all(bind=engine)
+    table_mapper.mapper.metadata.drop_all(bind=engine)
+    table_mapper.mapper.metadata.create_all(bind=engine)
+    # models.Base.metadata.drop_all(bind=engine)
+    # models.Base.metadata.create_all(bind=engine)
     yield
-    models.Base.metadata.drop_all(bind=engine)
-    models.Base.metadata.create_all(bind=engine)
+    # models.Base.metadata.drop_all(bind=engine)
+    # models.Base.metadata.create_all(bind=engine)
+    table_mapper.mapper.metadata.drop_all(bind=engine)
+    table_mapper.mapper.metadata.create_all(bind=engine)
 
 
 @pytest.fixture
@@ -288,5 +292,10 @@ def test_user_data():
 
 
 @pytest.fixture
-def test_adv_params():
-    return {"title": "test_title", "description": "test_description"}
+def test_adv_params(test_user_data):
+    return {"title": "test_title", "description": "test_description", "user_id": 1}
+
+
+@pytest.fixture(scope="session")
+def start_mapping():
+    table_mapper.start_mapping()
