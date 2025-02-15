@@ -51,8 +51,8 @@ def test_validate_data_if_incorrect_data_is_provided(input_data, incorrect_field
     )
     assert e.value.message[0]["type"] in ("missing", "string_type", "enum")
     assert e.value.message[0]["url"] in ("https://errors.pydantic.dev/2.9/v/missing",
-                                                "https://errors.pydantic.dev/2.9/v/string_type",
-                                                "https://errors.pydantic.dev/2.9/v/enum")
+                                         "https://errors.pydantic.dev/2.9/v/string_type",
+                                         "https://errors.pydantic.dev/2.9/v/enum")
 
 
 @pytest.mark.parametrize(
