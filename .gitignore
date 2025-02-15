@@ -4,5 +4,5 @@ __pycache__/
 config.py
 client.py
 .env
-.pytest_cache
+.pytest_cache/
 exper.py
