@@ -1,16 +1,13 @@
-from flask_bcrypt import Bcrypt
-
-from app.flask_entrypoints import adv
-
-bcrypt = Bcrypt(adv)
+import bcrypt
 
 
 def hash_password(password: str) -> str:
     password = password.encode()
-    return bcrypt.generate_password_hash(password).decode()
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password=password, salt=salt).decode()
 
 
 def check_password(hashed_password: str, password: str) -> bool:
     hashed_password = hashed_password.encode()
     password = password.encode()
-    return bcrypt.check_password_hash(pw_hash=hashed_password, password=password)
+    return bcrypt.checkpw(password=password, hashed_password=hashed_password)
