@@ -1,14 +1,10 @@
 from datetime import datetime
 from typing import Callable, Optional
-
-import app.flask_entrypoints.authentication
-from app.domain import services
-from app.domain.errors import NotFoundError
-
 import logging
 
-from app.domain.models import User, Advertisement
+from app.domain import errors, services, models
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
+
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
@@ -21,7 +17,7 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     user_params: dict[str, str | int] = services.get_params(model=user)
     if user_params:
         return user_params
-    raise app.domain.errors.NotFoundError(message_prefix="The user")
+    raise errors.NotFoundError(message_prefix="The user")
 
 
 def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
@@ -42,7 +38,7 @@ def update_user(user_id: int, check_current_user_func: Callable, validate_func: 
     if validated_data.get("password"):
         validated_data["password"] = hash_pass_func(password=validated_data["password"])
     with uow:
-        current_user: User = uow.users.get(instance_id=curent_user_id)
+        current_user: models.User = uow.users.get(instance_id=curent_user_id)
         updated_user = services.update_instance(instance=current_user, new_attrs=validated_data)
         uow.users.add(updated_user)
         uow.commit()
@@ -63,15 +59,15 @@ def get_related_advs(
         )
     if paginated_data["items"]:
         return paginated_data
-    raise app.domain.errors.NotFoundError(base_message="The related advertisements are not found.")
+    raise errors.NotFoundError(base_message="The related advertisements are not found.")
 
 
 def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
     current_user_id: int = check_current_user_func(user_id=user_id)
     with uow:
-        user_to_delete: User = uow.users.get(current_user_id)
+        user_to_delete: models.User = uow.users.get(current_user_id)
         if not user_to_delete:
-            raise app.domain.errors.NotFoundError
+            raise errors.NotFoundError
         deleted_user_params: dict[str, str | int] = services.get_params(model=user_to_delete)
         uow.users.delete(user_to_delete)
         uow.commit()
@@ -93,19 +89,19 @@ def update_adv(
         adv_id: int, new_params: dict, check_current_user_func: Callable, validate_func: Callable, uow
 ) -> dict[str, str | int]:
     with uow:
-        adv: Advertisement = uow.advs.get(instance_id=adv_id)
+        adv: models.Advertisement = uow.advs.get(instance_id=adv_id)
         if not adv:
-            raise app.domain.errors.NotFoundError(message_prefix="The advertisement")
+            raise errors.NotFoundError(message_prefix="The advertisement")
         check_current_user_func(user_id=adv.user_id)
         validated_data: dict[str, str] = validate_func(**new_params)
-        updated_adv: Advertisement = services.update_instance(instance=adv, new_attrs=validated_data)
+        updated_adv: models.Advertisement = services.update_instance(instance=adv, new_attrs=validated_data)
         uow.advs.add(updated_adv)
         uow.commit()
         updated_adv_params: dict = services.get_params(model=updated_adv)
         return updated_adv_params
 
 
-def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[User]:
+def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[models.User]:
     with uow:
         results = uow.users.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
                                                        comparison=Comparison.IS,
@@ -116,12 +112,12 @@ def get_users_list(column: UserColumns, column_value: str | int | datetime, uow)
 
 def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
     with uow:
-        adv: Advertisement = uow.advs.get(instance_id=adv_id)
+        adv: models.Advertisement = uow.advs.get(instance_id=adv_id)
     try:
         check_current_user_func(user_id=adv.user_id)
         return services.get_params(model=adv)
     except AttributeError:
-        raise app.domain.errors.NotFoundError(message_prefix="The advertisement")
+        raise errors.NotFoundError(message_prefix="The advertisement")
 
 
 def search_advs_by_text(
@@ -154,24 +150,24 @@ def delete_adv(adv_id: int, get_auth_user_id_func: Callable, uow) -> dict[str, s
                 uow.advs.delete(adv_to_delete)
                 uow.commit()
                 return deleted_adv_params
-            raise app.domain.errors.CurrentUserError
+            raise errors.CurrentUserError
         except AttributeError:
-            raise app.domain.errors.NotFoundError(message_prefix="The advertisement")
+            raise errors.NotFoundError(message_prefix="The advertisement")
 
 
 def jwt_auth(validate_func: Callable, check_pass_func: Callable[..., bool], grant_access_func: Callable,
              credentials: dict, uow) -> str:
     validated_data = validate_func(**credentials)
     with uow:
-        list_of_users: list[User] = uow.users.get_list_or_paginated_data(
+        list_of_users: list[models.User] = uow.users.get_list_or_paginated_data(
             filter_type=FilterTypes.COLUMN_VALUE, comparison=Comparison.IS, column=UserColumns.EMAIL,
             column_value=validated_data[UserColumns.EMAIL]
         )
     try:
-        user: User = list_of_users[0]
+        user: models.User = list_of_users[0]
     except IndexError:
-        raise app.domain.errors.AccessDeniedError
+        raise errors.AccessDeniedError
     if check_pass_func(password=validated_data["password"], hashed_password=user.password):
         access_token: str = grant_access_func(identity=user.id)
         return access_token
-    raise app.domain.errors.AccessDeniedError
+    raise errors.AccessDeniedError
