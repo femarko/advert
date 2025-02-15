@@ -1,8 +1,8 @@
 from sqlalchemy.exc import IntegrityError
 
 import app.repository.repository
-import app.errors
-from app.orm.orm_initialization import session_maker
+import app.domain.errors
+from app.orm import session_maker
 from app.repository.repository import RepoProto, UserRepository, AdvRepository
 
 
@@ -29,4 +29,4 @@ class UnitOfWork:
         try:
             self.session.commit()
         except IntegrityError:
-            raise app.errors.AlreadyExistsError
+            raise app.domain.errors.AlreadyExistsError

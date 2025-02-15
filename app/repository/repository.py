@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Any, Protocol, Optional
+from typing import Any, Protocol, Optional
 
 from sqlalchemy.exc import IntegrityError
 
-import app.errors
-import app.service_layer
-from app.models import User, Advertisement, ModelClass, UserColumns, AdvertisementColumns
+import app.domain.errors
+import app.service_layer.app_manager
+from app.domain.models import User, Advertisement, UserColumns, AdvertisementColumns
 from app.repository import filtering
 from app.repository.filtering import FilterTypes, Comparison
 
@@ -45,7 +44,7 @@ class Repository:
         try:
             self.session.add(instance)
         except IntegrityError:
-            raise app.errors.AlreadyExistsError
+            raise app.domain.errors.AlreadyExistsError
 
     def get(self, instance_id: int) -> Any:
         return self.session.get(self.model_cl, instance_id)

@@ -1,4 +1,4 @@
-from app.models import User, Advertisement
+from app.domain.models import User, Advertisement
 
 
 def create_user(**user_data) -> User:

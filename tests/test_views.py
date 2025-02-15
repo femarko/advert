@@ -2,14 +2,12 @@ from typing import Literal
 import pytest
 from datetime import datetime
 
-import app.service_layer
-from app import pass_hashing, authentication, validation, service_layer, unit_of_work, table_mapper
-from app.models import User, Advertisement
-
-
-@pytest.fixture(scope="function", autouse=True)
-def register_urls():
-    from app import views
+import app.service_layer.app_manager
+from app.service_layer import app_manager, unit_of_work
+from app.security_and_validation import authentication, pass_hashing, validation
+from app.orm import table_mapper
+from app.domain.models import User, Advertisement
+from app.flask_entrypoints import views
 
 
 @pytest.fixture
@@ -44,7 +42,7 @@ def test_adv_id() -> Literal[1]:
     return 1
 
 
-app.table_mapper.start_mapping()
+app.orm.table_mapper.start_mapping()
 
 
 def test_create_user(test_client, clear_db_before_and_after_test):
@@ -62,8 +60,8 @@ def test_create_user(test_client, clear_db_before_and_after_test):
 
 def test_create_user_with_integrity_error(test_client, clear_db_before_and_after_test):
     user_data = {"name": "test_name", "email": "test@email.com", "password": "test_password"}
-    service_layer.create_user(user_data=user_data, validate_func=validation.validate_data_for_user_creation,
-                              hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
+    app_manager.create_user(user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+                            hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
     response = test_client.post("http://127.0.0.1:5000/users/", json=user_data)
     assert response.status_code == 409
     assert response.json == {"errors": "A user with the provided params already existsts."}
@@ -99,13 +97,13 @@ def test_create_adv_returns_201_and_ignores_extra_params(
         test_client, app_context, clear_db_before_and_after_test, adv_params, extra_params
 ):
     user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-    user_id: int = service_layer.create_user(
+    user_id: int = app_manager.create_user(
         user_data=user_data, validate_func=validation.validate_data_for_user_creation,
         hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
     )
     uow = unit_of_work.UnitOfWork()
     with app_context:
-        access_token = service_layer.jwt_auth(
+        access_token = app_manager.jwt_auth(
             validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
             grant_access_func=authentication.get_access_token, credentials=user_data, uow=uow
         )
@@ -139,12 +137,12 @@ def test_create_adv_returns_400_if_invalid_adv_params_passed(
         test_client, clear_db_before_and_after_test, app_context, adv_params, type, loc, input, msg, url
 ):
     user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
-    service_layer.create_user(
+    app_manager.create_user(
         user_data=user_data, validate_func=validation.validate_data_for_user_creation,
         hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork()
     )
     with app_context:
-        access_token = service_layer.jwt_auth(
+        access_token = app_manager.jwt_auth(
             validate_func=validation.validate_login_credentials, check_pass_func=pass_hashing.check_password,
             grant_access_func=authentication.get_access_token, credentials=user_data, uow=unit_of_work.UnitOfWork()
         )
@@ -162,8 +160,8 @@ def test_create_adv_returns_400_if_invalid_adv_params_passed(
 def test_create_adv_returns_401_when_user_is_not_authenticated(test_client, clear_db_before_and_after_test):
     user_data = {"name": "test_name", "email": "test@email.test", "password": "test_pass"}
     adv_params = {"title": "test_title", "description": "test_description"}
-    service_layer.create_user(user_data=user_data, validate_func=validation.validate_data_for_user_creation,
-                              hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
+    app_manager.create_user(user_data=user_data, validate_func=validation.validate_data_for_user_creation,
+                            hash_pass_func=pass_hashing.hash_password, uow=unit_of_work.UnitOfWork())
     response = test_client.post("http://127.0.0.1:5000/advertisements/", json=adv_params,)
     assert response.status_code == 401
     assert response.json == {"msg": "Missing Authorization Header"}

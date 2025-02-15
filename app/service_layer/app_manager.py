@@ -1,21 +1,14 @@
 from datetime import datetime
-from typing import Any, Callable, Protocol, Optional
+from typing import Callable, Optional
 
-from flask import request, Response
-from sqlalchemy.exc import IntegrityError
-
-import app.authentication
-from app import models, adv, validation, pass_hashing, services
-from app.error_handlers import HttpError
-from app.errors import NotFoundError, ValidationError, AccessDeniedError, CurrentUserError, \
-    AlreadyExistsError
-from app.repository.filtering import get_list_or_paginated_data
+import app.security_and_validation.authentication
+from app.domain import services
+from app.domain.errors import NotFoundError
 
 import logging
 
-from app.models import ModelClass, User, Advertisement
+from app.domain.models import User, Advertisement
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
-from app.base_resut import BaseResult
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
@@ -46,7 +39,7 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     user_params: dict[str, str | int] = services.get_params(model=user)
     if user_params:
         return user_params
-    raise app.errors.NotFoundError(message_prefix="The user")
+    raise app.domain.errors.NotFoundError(message_prefix="The user")
 
 
 def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
@@ -88,7 +81,7 @@ def get_related_advs(
         )
     if paginated_data["items"]:
         return paginated_data
-    raise app.errors.NotFoundError(base_message="The related advertisements are not found.")
+    raise app.domain.errors.NotFoundError(base_message="The related advertisements are not found.")
 
 
 def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
@@ -96,7 +89,7 @@ def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[st
     with uow:
         user_to_delete: User = uow.users.get(current_user_id)
         if not user_to_delete:
-            raise app.errors.NotFoundError
+            raise app.domain.errors.NotFoundError
         deleted_user_params: dict[str, str | int] = services.get_params(model=user_to_delete)
         uow.users.delete(user_to_delete)
         uow.commit()
@@ -120,7 +113,7 @@ def update_adv(
     with uow:
         adv: Advertisement = uow.advs.get(instance_id=adv_id)
         if not adv:
-            raise app.errors.NotFoundError(message_prefix="The advertisement")
+            raise app.domain.errors.NotFoundError(message_prefix="The advertisement")
         check_current_user_func(user_id=adv.user_id)
         validated_data: dict[str, str] = validate_func(**new_params)
         updated_adv: Advertisement = services.update_instance(instance=adv, new_attrs=validated_data)
@@ -154,7 +147,7 @@ def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[
         check_current_user_func(user_id=adv.user_id)
         return services.get_params(model=adv)
     except AttributeError:
-        raise app.errors.NotFoundError(message_prefix="The advertisement")
+        raise app.domain.errors.NotFoundError(message_prefix="The advertisement")
 
 
 def search_advs_by_text(
@@ -187,9 +180,9 @@ def delete_adv(adv_id: int, get_auth_user_id_func: Callable, uow) -> dict[str, s
                 uow.advs.delete(adv_to_delete)
                 uow.commit()
                 return deleted_adv_params
-            raise app.errors.CurrentUserError
+            raise app.domain.errors.CurrentUserError
         except AttributeError:
-            raise app.errors.NotFoundError(message_prefix="The advertisement")
+            raise app.domain.errors.NotFoundError(message_prefix="The advertisement")
 
 
 # def add_model_instance(model_instance: ModelClass) -> ModelClass:
@@ -240,8 +233,8 @@ def jwt_auth(validate_func: Callable, check_pass_func: Callable[..., bool], gran
     try:
         user: User = list_of_users[0]
     except IndexError:
-        raise app.errors.AccessDeniedError
+        raise app.domain.errors.AccessDeniedError
     if check_pass_func(password=validated_data["password"], hashed_password=user.password):
         access_token: str = grant_access_func(identity=user.id)
         return access_token
-    raise app.errors.AccessDeniedError
+    raise app.domain.errors.AccessDeniedError

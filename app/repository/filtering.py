@@ -1,6 +1,5 @@
 import dataclasses
 import enum
-import typing
 
 import sqlalchemy
 from dataclasses import dataclass
@@ -9,9 +8,9 @@ from typing import Type, Literal, Any, Optional
 
 from sqlalchemy.orm import Query
 
-import app.errors
-from app import services
-from app.models import AdvertisementColumns, UserColumns, ModelClass, User, Advertisement, ModelClasses
+import app.domain.errors
+from app.domain import services
+from app.domain.models import AdvertisementColumns, UserColumns, ModelClass, User, Advertisement, ModelClasses
 
 
 class InvalidFilterParams(Exception):
@@ -199,7 +198,7 @@ class Filter:
                                                f'{self.params_info.valid_params[mc.__name__ + "_columns"]}.'}
                 )
         if self.params_info.logs:
-            raise app.errors.ValidationError(message=self.params_info.create_message())
+            raise app.domain.errors.ValidationError(message=self.params_info.create_message())
 
     def _check_page_and_per_page(self, page: Any, per_page: Any) -> dict[Literal["page", "per_page"], int]:
         params_dict = {"page": page, "per_page": per_page}

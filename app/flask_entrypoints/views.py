@@ -1,39 +1,41 @@
 from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required
 
-import app.errors
+import app.domain.errors
 import app.repository.filtering
-from app import adv, models, pass_hashing, validation, service_layer, authentication
-from app.error_handlers import HttpError
+from app.flask_entrypoints import adv
+from app.service_layer import app_manager
+from app.security_and_validation import authentication, pass_hashing, validation
+from app.flask_entrypoints.error_handlers import HttpError
 
-from app.unit_of_work import UnitOfWork
+from app.service_layer.unit_of_work import UnitOfWork
 
 
 @adv.route("/users/<int:user_id>/", methods=["GET"])
 @jwt_required()
 def get_user_data(user_id: int) -> tuple[Response, int]:
     try:
-        user_data: dict = service_layer.get_user_data(
+        user_data: dict = app_manager.get_user_data(
             user_id=user_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
         )
         return jsonify(user_data), 200
-    except app.errors.CurrentUserError as e:
+    except app.domain.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.NotFoundError as e:
+    except app.domain.errors.NotFoundError as e:
         raise HttpError(status_code=404, description=e.message)
 
 
 @adv.route("/users/", methods=["POST"])
 def create_user():
     try:
-        new_user_id: int = service_layer.create_user(
+        new_user_id: int = app_manager.create_user(
             user_data=request.json, validate_func=validation.validate_data_for_user_creation,
             hash_pass_func=pass_hashing.hash_password, uow=UnitOfWork()
         )
         return jsonify({"user_id": new_user_id}), 201
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-    except app.errors.AlreadyExistsError as e:
+    except app.domain.errors.AlreadyExistsError as e:
         raise HttpError(status_code=409, description=f"A user {e.message}")
 
 
@@ -41,15 +43,15 @@ def create_user():
 @jwt_required()
 def update_user(user_id: int):
     try:
-        updated_user_data: dict = service_layer.update_user(
+        updated_user_data: dict = app_manager.update_user(
             user_id=user_id, check_current_user_func=authentication.check_current_user,
             validate_func=validation.validate_data_for_user_updating, hash_pass_func=pass_hashing.hash_password,
             new_data=request.json, uow=UnitOfWork()
         )
         return jsonify({"modified_data": updated_user_data}), 200
-    except app.errors.CurrentUserError as e:
+    except app.domain.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
 
 
@@ -59,7 +61,7 @@ def get_related_advs(user_id: int):
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     try:
-        result = service_layer.get_related_advs(
+        result = app_manager.get_related_advs(
             authenticated_user_id=user_id,  # todo: why I called this param "authenticated_user_id"?
             check_current_user_func=authentication.check_current_user,
             page=page,
@@ -67,11 +69,11 @@ def get_related_advs(user_id: int):
             uow=UnitOfWork()
         )
         return result, 200
-    except app.errors.CurrentUserError:
+    except app.domain.errors.CurrentUserError:
         raise HttpError(status_code=403, description="Unavailable operation.")
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
-    except app.errors.NotFoundError as e:
+    except app.domain.errors.NotFoundError as e:
         raise HttpError(status_code=404, description=e.message)
 
 
@@ -79,11 +81,11 @@ def get_related_advs(user_id: int):
 @jwt_required()
 def delete_user(user_id: int):
     try:
-        deleted_user_params: dict[str, str | int] = service_layer.delete_user(
+        deleted_user_params: dict[str, str | int] = app_manager.delete_user(
             user_id=user_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
         )
         return jsonify({"deleted_user_params": deleted_user_params}), 200
-    except app.errors.CurrentUserError:
+    except app.domain.errors.CurrentUserError:
         raise HttpError(status_code=403, description="Unavailable operation.")
 
 
@@ -91,13 +93,13 @@ def delete_user(user_id: int):
 @jwt_required()
 def get_adv_params(adv_id: int):
     try:
-        adv_params: dict[str, str | int] = service_layer.get_adv_params(
+        adv_params: dict[str, str | int] = app_manager.get_adv_params(
             adv_id=adv_id, check_current_user_func=authentication.check_current_user, uow=UnitOfWork()
         )
         return adv_params, 200
-    except app.errors.CurrentUserError as e:
+    except app.domain.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.NotFoundError as e:
+    except app.domain.errors.NotFoundError as e:
         raise HttpError(status_code=404, description=e.message)
 
 
@@ -105,14 +107,14 @@ def get_adv_params(adv_id: int):
 @jwt_required()
 def create_adv():
     try:
-        new_adv_id: int = service_layer.create_adv(
+        new_adv_id: int = app_manager.create_adv(
             get_auth_user_id_func=authentication.get_authenticated_user_identity,
             validate_func=validation.validate_data_for_adv_creation, adv_params=request.json, uow=UnitOfWork()
         )
         return jsonify({'new_advertisement_id': new_adv_id}), 201
-    except app.errors.CurrentUserError as e:
+    except app.domain.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
 
 
@@ -120,14 +122,14 @@ def create_adv():
 @jwt_required()
 def update_adv(adv_id: int):
     try:
-        updated_adv_params: dict [str, str | int] = service_layer.update_adv(
+        updated_adv_params: dict [str, str | int] = app_manager.update_adv(
             adv_id=adv_id, new_params=request.json, check_current_user_func=authentication.check_current_user,
             validate_func=validation.validate_data_for_adv_updating, uow=UnitOfWork())
-    except app.errors.NotFoundError as e:
+    except app.domain.errors.NotFoundError as e:
         raise HttpError(status_code=404, description=e.message)
-    except app.errors.CurrentUserError as e:
+    except app.domain.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))
     return {"updated_adv_params": updated_adv_params}, 200
 
@@ -135,14 +137,14 @@ def update_adv(adv_id: int):
 @adv.route("/advertisements", methods=["GET"])
 def search_advs_by_text():
     try:
-        paginated_result: dict[str, str | int] = service_layer.search_advs_by_text(
+        paginated_result: dict[str, str | int] = app_manager.search_advs_by_text(
             column=request.args.get("column"),
             column_value=request.args.get("column_value"),
             uow=UnitOfWork(),
             page=request.args.get("page"),
             per_page=request.args.get("per_page")
         )
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e.message))
     return paginated_result, 200
 
@@ -151,12 +153,12 @@ def search_advs_by_text():
 @jwt_required()
 def delete_adv(adv_id: int):
     try:
-        deleted_adv_params: dict[str, str | int] = service_layer.delete_adv(
+        deleted_adv_params: dict[str, str | int] = app_manager.delete_adv(
             adv_id=adv_id, get_auth_user_id_func=authentication.get_authenticated_user_identity, uow=UnitOfWork()
         )
-    except app.errors.CurrentUserError as e:
+    except app.domain.errors.CurrentUserError as e:
         raise HttpError(status_code=403, description=e.message)
-    except app.errors.NotFoundError as e:
+    except app.domain.errors.NotFoundError as e:
         raise HttpError(status_code=404, description=e.message)
     return {"deleted_advertisement_params": deleted_adv_params}, 200
 
@@ -164,13 +166,13 @@ def delete_adv(adv_id: int):
 @adv.route("/login/", methods=["POST"])
 def login():
     try:
-        access_token = service_layer.jwt_auth(validate_func=validation.validate_login_credentials,
-                                              check_pass_func=pass_hashing.check_password,
-                                              grant_access_func=authentication.get_access_token,
-                                              credentials=request.json,
-                                              uow=UnitOfWork())
+        access_token = app_manager.jwt_auth(validate_func=validation.validate_login_credentials,
+                                            check_pass_func=pass_hashing.check_password,
+                                            grant_access_func=authentication.get_access_token,
+                                            credentials=request.json,
+                                            uow=UnitOfWork())
         return jsonify({"access_token": access_token}), 200
-    except app.errors.AccessDeniedError as e:
+    except app.domain.errors.AccessDeniedError as e:
         raise HttpError(status_code=401, description=e.message)
-    except app.errors.ValidationError as e:
+    except app.domain.errors.ValidationError as e:
         raise HttpError(status_code=400, description=str(e))

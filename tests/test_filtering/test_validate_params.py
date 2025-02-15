@@ -1,8 +1,8 @@
 import pytest
 
-import app.errors
+import app.domain.errors
 from app.repository.filtering import Filter, Params, ValidParams
-from app.models import Advertisement, User, ModelClasses
+from app.domain.models import Advertisement, User
 
 
 def test_validate_params_does_not_raise_validation_error_when_all_params_are_correct():
@@ -24,7 +24,7 @@ def test_validate_params_does_not_raise_validation_error_when_all_params_are_cor
     )
 )
 def test_validate_params_raises_validation_error_when_all_params_are_invalid(data):
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {'model_class', 'filter_type', 'column', 'comparison'}
@@ -45,7 +45,7 @@ def test_validate_params_raises_validation_error_when_all_params_are_invalid(dat
 
 def test_validate_params_raises_validation_error_when_all_params_are_missing():
     data = {}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "missing_params"}
     assert e.value.message["params_passed"] == data
@@ -56,7 +56,7 @@ def test_validate_params_raises_validation_error_when_all_params_are_missing():
 
 def test_validate_params_raises_validation_error_when_all_params_are_none():
     data = {"model_class": None, "filter_type": None, "comparison": None, "column": None, "column_value": None}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "missing_params"}
     assert e.value.message["params_passed"] == {}
@@ -67,7 +67,7 @@ def test_validate_params_raises_validation_error_when_all_params_are_none():
 
 def test_validate_params_raises_validation_error_when_filter_type_and_comparison_are_missing():
     data = {"model_class": User, "column": "id", "column_value": "text"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "missing_params"}
     assert e.value.message["params_passed"] == data
@@ -77,7 +77,7 @@ def test_validate_params_raises_validation_error_when_filter_type_and_comparison
 def test_validate_params_raises_validation_error_when_model_class_is_invalid():
     data = {"model_class": "INVALID", "filter_type": "column_value", "comparison": "is", "column": "name",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class"}
@@ -91,7 +91,7 @@ def test_validate_params_raises_validation_error_when_model_class_is_invalid():
 def test_validate_params_raises_validation_error_when_filter_type_is_invalid(model_class, column):
     data = {"model_class": model_class, "filter_type": "INVALID", "comparison": "is", "column": column,
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"filter_type"}
@@ -104,7 +104,7 @@ def test_validate_params_raises_validation_error_when_filter_type_is_invalid(mod
 def test_validate_params_raises_validation_error_when_model_class_and_filter_type_are_invalid():
     data = {"model_class": "INVALID", "filter_type": "INVALID", "comparison": "is", "column": "name",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "filter_type"}
@@ -127,7 +127,7 @@ def test_validate_params_raises_validation_error_when_model_class_and_filter_typ
 def test_validate_params_raises_validation_error_when_column_is_invalid(model_class, columns):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": "is", "column": "INVALID",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"column"}
@@ -147,7 +147,7 @@ def test_validate_params_raises_validation_error_when_column_is_invalid(model_cl
 def test_validate_params_raises_validation_error_when_filter_type_and_column_are_invalid(model_class, columns):
     data = {"model_class": model_class, "filter_type": "INVALID", "comparison": "is", "column": "INVALID",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"filter_type", "column"}
@@ -163,7 +163,7 @@ def test_validate_params_raises_validation_error_when_filter_type_and_column_are
 def test_validate_params_raises_validation_error_when_model_class_and_column_are_invalid():
     data = {"model_class": "INVALID", "filter_type": "column_value", "comparison": "is", "column": "INVALID",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "column"}
@@ -178,7 +178,7 @@ def test_validate_params_raises_validation_error_when_model_class_and_column_are
 
 def test_validate_params_raises_validation_error_when_column_for_model_class_adv_is_wrong_and_filter_type_missing():
     data = {"model_class": Advertisement, "column": "wrong", "column_value": "2025-01-01", "comparison": "is"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "missing_params", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"column"}
@@ -193,7 +193,7 @@ def test_validate_params_raises_validation_error_when_column_for_model_class_adv
 def test_validate_params_raises_validation_error_when_comparison_is_invalid(model_class, column):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": "INVALID", "column": column,
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter(session="fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"comparison"}
@@ -213,7 +213,7 @@ def test_validate_params_raises_validation_error_when_comparison_is_invalid(mode
 def test_validate_params_raises_validation_error_when_comparison_and_column_are_invalid(model_class, columns):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": "INVALID",
             "column": "INVALID", "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"column", "comparison"}
@@ -230,7 +230,7 @@ def test_validate_params_raises_validation_error_when_comparison_and_column_are_
 def test_validate_params_raises_validation_error_when_filter_type_and_comparison_are_invalid(model_class, column):
     data = {"model_class": model_class, "filter_type": "INVALID", "comparison": "INVALID", "column": column,
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"filter_type", "comparison"}
@@ -246,7 +246,7 @@ def test_validate_params_raises_validation_error_when_filter_type_and_comparison
 def test_validate_params_raises_validation_error_when_model_class_and_comparison_are_invalid():
     data = {"model_class": "INVALID", "filter_type": "column_value", "comparison": "INVALID", "column": "name",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "comparison"}
@@ -263,7 +263,7 @@ def test_validate_params_raises_validation_error_when_model_class_and_comparison
 def test_validate_params_raises_validation_error_when_model_class_filter_type_and_comparison_are_invalid(column):
     data = {"model_class": "INVALID", "filter_type": "INVALID", "comparison": "INVALID", "column": column,
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "filter_type", "comparison"}
@@ -305,7 +305,7 @@ def test_validate_params_raises_error_when_ft_is_column_value_column_is_a_text_f
 ):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": comparison, "column": column,
             "column_value": "3"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"comparison"}
@@ -331,7 +331,7 @@ def test_validate_params_raises_validation_error_when_column_is_creation_date_an
 ):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": "is", "column": "creation_date",
             "column_value": wrong_date}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"column_value"}
@@ -347,7 +347,7 @@ def test_validate_params_raises_validation_error_when_column_is_id_or_user_id_an
 ):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": "is", "column": column,
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"column_value"}
@@ -392,7 +392,7 @@ def test_validate_params_raises_validation_error_when_filter_type_is_search_text
 ):
     data = {"model_class": model_class, "filter_type": "search_text", "comparison": "", "column": column,
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"column"}
@@ -405,7 +405,7 @@ def test_validate_params_raises_validation_error_when_filter_type_is_search_text
 def test_validate_params_raises_validation_error_when_model_class_filter_type_and_column_are_invalid():
     data = {"model_class": "INVALID", "filter_type": "INVALID", "comparison": "is", "column": "INVALID",
             "column_value": "test"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "filter_type", "column"}
@@ -425,7 +425,7 @@ def test_validate_params_raises_validation_error_when_model_class_filter_type_an
 def test_validate_params_raises_validation_error_when_model_class_filter_type_and_column_value_are_invalid(column):
     data = {"model_class": "INVALID", "filter_type": "INVALID", "comparison": "is", "column": column,
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "filter_type"}
@@ -442,7 +442,7 @@ def test_validate_params_raises_validation_error_when_model_class_filter_type_an
 def test_validate_params_raises_validation_error_when_model_class_comparison_and_column_value_are_invalid(column):
     data = {"model_class": "INVALID", "filter_type": "column_value", "comparison": "INVALID", "column": column,
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "comparison"}
@@ -458,7 +458,7 @@ def test_validate_params_raises_validation_error_when_model_class_comparison_and
 def test_validate_params_raises_validation_error_when_model_class_column_and_column_value_are_invalid():
     data = {"model_class": "INVALID", "filter_type": "column_value", "comparison": "is", "column": "INVALID",
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"model_class", "column"}
@@ -477,7 +477,7 @@ def test_validate_params_raises_validation_error_when_filter_type_comparison_and
 ):
     data = {"model_class": model_class, "filter_type": "INVALID", "comparison": "INVALID", "column": column,
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"filter_type", "comparison"}
@@ -498,7 +498,7 @@ def test_validate_params_raises_validation_error_when_filter_type_column_and_col
 ):
     data = {"model_class": model_class, "filter_type": "INVALID", "comparison": "is", "column": "INVALID",
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"filter_type", "column"}
@@ -516,7 +516,7 @@ def test_validate_params_raises_validation_error_when_comparison_column_column_v
 ):
     data = {"model_class": model_class, "filter_type": "column_value", "comparison": "INVALID", "column": "INVALID",
             "column_value": "INVALID"}
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         Filter("fake_session")._validate_params(data=data, params=Params)
     assert set(e.value.message.keys()) == {"params_passed", "invalid_params"}
     assert set(e.value.message["invalid_params"].keys()) == {"comparison", "column"}

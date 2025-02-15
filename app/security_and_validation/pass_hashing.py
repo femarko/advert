@@ -1,6 +1,6 @@
 from flask_bcrypt import Bcrypt
 
-from app import adv
+from app.flask_entrypoints import adv
 
 bcrypt = Bcrypt(adv)
 

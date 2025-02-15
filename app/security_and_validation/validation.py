@@ -1,7 +1,7 @@
 import pydantic
 from typing import TypeVar, Type
 
-import app.errors
+import app.domain.errors
 
 
 PydanticModel = TypeVar("PydanticModel", bound=pydantic.BaseModel)
@@ -38,7 +38,7 @@ def validate_data(validation_model: Type[PydanticModel], data: dict[str, str]):
     try:
         return validation_model.model_validate(data).model_dump(exclude_unset=True)
     except pydantic.ValidationError as e:
-        raise app.errors.ValidationError(e.errors())
+        raise app.domain.errors.ValidationError(e.errors())
 
 
 def validate_login_credentials(**credentials):

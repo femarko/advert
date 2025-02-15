@@ -1,8 +1,7 @@
 import pytest
 
-import app.errors
-from app.validation import validate_data, CreateAdv, CreateUser, Login
-from app.error_handlers import HttpError
+import app.domain.errors
+from app.security_and_validation.validation import validate_data, CreateAdv, CreateUser, Login
 
 
 @pytest.mark.parametrize(
@@ -18,7 +17,7 @@ from app.error_handlers import HttpError
     )
 )
 def test_validate_data_if_incomplete_data_is_provided(input_data, missed_field, validation_model):
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         validate_data(validation_model=validation_model, data=input_data)
     assert e.value.message[0]["input"] == input_data
     assert e.value.message[0]["loc"][0] == missed_field
@@ -39,7 +38,7 @@ def test_validate_data_if_incomplete_data_is_provided(input_data, missed_field, 
     )
 )
 def test_validate_data_if_incorrect_data_is_provided(input_data, incorrect_field, validation_model):
-    with pytest.raises(app.errors.ValidationError) as e:
+    with pytest.raises(app.domain.errors.ValidationError) as e:
         validate_data(validation_model=validation_model, data=input_data)
     assert e.value.message[0]["input"] in (input_data, input_data.get(incorrect_field))
     assert e.value.message[0]["loc"][0] == incorrect_field

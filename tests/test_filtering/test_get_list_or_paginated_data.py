@@ -1,9 +1,9 @@
 import pytest
-import app.errors
+import app.domain.errors
 import app.repository
 import app.repository.filtering
-from app import services, models
-from app.models import User, Advertisement
+from app.domain import models, services
+from app.domain.models import User, Advertisement
 
 
 def test_get_list_or_paginated_data_returns_list_when_all_params_are_correct_and_paginate_is_omitted(
@@ -131,7 +131,7 @@ def test_get_list_or_paginated_data_raises_error_when_invalid_params_are_passed(
 ):
     session = session_maker
     with session() as s:
-        with pytest.raises(expected_exception=app.errors.ValidationError) as e:
+        with pytest.raises(expected_exception=app.domain.errors.ValidationError) as e:
             app.repository.filtering.get_list_or_paginated_data(
                 session=s,
                 model_class="INVALID", filter_type="INVALID", comparison="INVALID", column="INVALID",  # type: ignore
@@ -163,7 +163,7 @@ def test_get_list_or_paginated_data_raises_error_when_all_params_are_missing(
 ):
     session = session_maker
     with session() as s:
-        with pytest.raises(expected_exception=app.errors.ValidationError) as e:
+        with pytest.raises(expected_exception=app.domain.errors.ValidationError) as e:
             app.repository.filtering.get_list_or_paginated_data(session=s)
     assert set(e.value.message.keys()) == {"params_passed", "missing_params"}
     assert e.value.message["params_passed"] == {}

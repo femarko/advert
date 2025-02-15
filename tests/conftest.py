@@ -4,14 +4,16 @@ from typing import Optional
 import pytest
 import sqlalchemy
 
-import app.orm.orm_initialization
-import app.pass_hashing, app.errors
-from app import adv, models, services, table_mapper
+import app.orm
+import app.security_and_validation.pass_hashing, app.domain.errors
+from app.flask_entrypoints import adv
+from app.orm import table_mapper
+from app.domain import services
 
 
 @pytest.fixture(scope="session")
 def engine():
-    return sqlalchemy.create_engine(app.orm.orm_initialization.POSTGRES_DSN)
+    return sqlalchemy.create_engine(app.orm.POSTGRES_DSN)
 
 
 @pytest.fixture
@@ -35,7 +37,7 @@ def test_client():
 
 @pytest.fixture
 def app_context():
-    from app import adv
+    from app.flask_entrypoints import adv
     return adv.app_context()
 
 
@@ -54,7 +56,7 @@ def create_test_users_and_advs(session_maker, test_date):
                          dict(id=i,
                               name=f"test_filter_{i}",
                               email=f"test_filter_{i}@email.com",
-                              password=app.pass_hashing.hash_password(f"test_filter_{i}_pass"),
+                              password=app.security_and_validation.pass_hashing.hash_password(f"test_filter_{i}_pass"),
                               creation_date=test_date))
             sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
                                          'VALUES (:id, :title, :description, :creation_date, :user_id)'),

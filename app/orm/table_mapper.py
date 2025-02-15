@@ -1,8 +1,8 @@
 import sqlalchemy
-from sqlalchemy import Table, Column, Integer, String, DateTime, func, ForeignKey, create_engine
+from sqlalchemy import Table, Column, Integer, String, DateTime, func, ForeignKey
 from sqlalchemy.orm import relationship
 
-import app.models
+import app.domain.models
 
 
 mapper = sqlalchemy.orm.registry()
@@ -31,8 +31,10 @@ adv_table = Table(
 
 def start_mapping():
     mapper.map_imperatively(
-        class_=app.models.User, local_table=user_table, properties={
-            "adv": relationship(app.models.Advertisement, backref="user", order_by=adv_table.c.id, cascade="delete")
+        class_=app.domain.models.User, local_table=user_table, properties={
+            "adv": relationship(
+                app.domain.models.Advertisement, backref="user", order_by=adv_table.c.id, cascade="delete"
+            )
         }
     )
-    mapper.map_imperatively(class_=app.models.Advertisement, local_table=adv_table)
+    mapper.map_imperatively(class_=app.domain.models.Advertisement, local_table=adv_table)

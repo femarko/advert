@@ -1,10 +1,9 @@
-from dataclasses import dataclass
 from typing import Any
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity
 
-import app.errors
-from app import adv
-from app.models import UserColumns
+import app.domain.errors
+from app.flask_entrypoints import adv
+from app.domain.models import UserColumns
 
 
 jwt = JWTManager(app=adv)
@@ -38,4 +37,4 @@ def check_current_user(user_id: int | None = None, get_cuid: bool = True) -> int
         if get_cuid is False:
             return
         return current_user_id
-    raise app.errors.CurrentUserError
+    raise app.domain.errors.CurrentUserError
