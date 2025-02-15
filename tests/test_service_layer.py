@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pytest
 
 import app.domain.errors
-import app.security_and_validation.authentication
+import app.flask_entrypoints.authentication
 from app.service_layer import app_manager
 
 

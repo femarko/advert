@@ -4,10 +4,10 @@ from datetime import datetime
 
 import app.service_layer.app_manager
 from app.service_layer import app_manager, unit_of_work
-from app.security_and_validation import authentication, pass_hashing, validation
+from app.pass_hashing_and_validation import pass_hashing, validation
 from app.orm import table_mapper
 from app.domain.models import User, Advertisement
-from app.flask_entrypoints import views
+from app.flask_entrypoints import authentication, views
 
 
 @pytest.fixture

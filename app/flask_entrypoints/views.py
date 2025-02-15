@@ -3,9 +3,9 @@ from flask_jwt_extended import jwt_required
 
 import app.domain.errors
 import app.repository.filtering
-from app.flask_entrypoints import adv
+from app.flask_entrypoints import adv, authentication
 from app.service_layer import app_manager
-from app.security_and_validation import authentication, pass_hashing, validation
+from app.pass_hashing_and_validation import pass_hashing, validation
 from app.flask_entrypoints.error_handlers import HttpError
 
 from app.service_layer.unit_of_work import UnitOfWork

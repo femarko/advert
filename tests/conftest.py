@@ -5,7 +5,7 @@ import pytest
 import sqlalchemy
 
 import app.orm
-import app.security_and_validation.pass_hashing, app.domain.errors
+import app.pass_hashing_and_validation.pass_hashing, app.domain.errors
 from app.flask_entrypoints import adv
 from app.orm import table_mapper
 from app.domain import services
@@ -56,7 +56,9 @@ def create_test_users_and_advs(session_maker, test_date):
                          dict(id=i,
                               name=f"test_filter_{i}",
                               email=f"test_filter_{i}@email.com",
-                              password=app.security_and_validation.pass_hashing.hash_password(f"test_filter_{i}_pass"),
+                              password=app.pass_hashing_and_validation.pass_hashing.hash_password(
+                                  f"test_filter_{i}_pass"
+                              ),
                               creation_date=test_date))
             sess.execute(sqlalchemy.text('INSERT INTO "adv" (id, title, description, creation_date, user_id) '
                                          'VALUES (:id, :title, :description, :creation_date, :user_id)'),

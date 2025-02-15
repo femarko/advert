@@ -1,7 +1,7 @@
 import pytest
 
 import app.domain.errors
-from app.security_and_validation.validation import validate_data, CreateAdv, CreateUser, Login
+from app.pass_hashing_and_validation.validation import validate_data, CreateAdv, CreateUser, Login
 
 
 @pytest.mark.parametrize(

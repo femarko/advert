@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Callable, Optional
 
-import app.security_and_validation.authentication
+import app.flask_entrypoints.authentication
 from app.domain import services
 from app.domain.errors import NotFoundError
 
