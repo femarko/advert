@@ -1,2 +1,0 @@
-[run]
-omit=.pytest_cache/*,tests/*,venv_flask_adv/*,.env,.gitignore,client.py,docker-compose.yml,README.md,requirements.txt,exper.py
