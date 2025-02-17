@@ -1,13 +1,8 @@
 from datetime import datetime
 from typing import Callable, Optional
-import logging
 
 from app.domain import errors, services, models
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
-
-
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
 def get_user_data(user_id: int, check_current_user_func: Callable, uow):
