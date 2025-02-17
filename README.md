@@ -65,9 +65,9 @@ $ python3 -m venv venv_advert
 $ source venv_advert/bin/activate  # for Linux
 $ venv_advert\Scripts\activate  # for Windows
 ```
-Необходимо также создать файл ```.env``` (образец: [.env.example]()) и установить зависимости 
-в виртуальное окружение и запустить docker-контейнеры с базой данных и
-```PGAdmin```:  
+Необходимо также создать файл ```.env``` (образец: [.env.example]()), 
+установить зависимости в виртуальное окружение и запустить docker-контейнеры 
+с базой данных и ```PGAdmin```:  
 ```python
 $ pip install -r requirements.txt
 $ docker-compose up -d
