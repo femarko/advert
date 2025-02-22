@@ -1,0 +1,199 @@
+openapi: 3.0.0
+info:
+  title: Advert
+  version: 1.0.0
+paths:
+  /users/:
+    post:
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Creation_user_data'
+      responses:
+        '200':
+          description: Successfull response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: integer
+                    example: 1
+  /users/{user_id}/:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Get user data by ID
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User_data'
+    patch:
+      summary: Update user data
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdatingData'
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User_update_result'
+    delete:
+      summary: Delete user by ID
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDeleteResult'
+  /users/{user_id}/advertisements:
+    get:
+      summary: Get advertisements related to a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatedAdvs'
+security:
+  - jwt_auth: []
+components:
+  schemas:
+    User_data:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: test_name
+        email:
+          type: string
+          example: email@test.com
+        creation_date:
+          type: string
+          example: 01/01/1900
+    Creation_user_data:
+      type: object
+      properties:
+        name:
+          type: string
+          example: test_name
+        email:
+          type: string
+          example: email@test.com
+        password:
+          type: string
+          example: test_pass
+    UserUpdatingData:
+      type: object
+      properties:
+        name:
+          type: string
+          example: new_name
+        email:
+          type: string
+          example: new_email@test.com
+        password:
+          type: string
+          example: new_password
+
+    Updated_user_data:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        name:
+          type: string
+          example: new_name
+        email:
+          type: string
+          example: new_email@test.com
+        creation_date:
+          type: string
+          example: 02/01/1900
+    User_update_result:
+      type: object
+      properties:
+        modified_data:
+          $ref: '#/components/schemas/Updated_user_data'
+    UserDeleteResult:
+      type: object
+      properties:
+        deleted_user_params:
+          $ref: '#/components/schemas/User_data'
+
+    Advertisement:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        title:
+          type: string
+          example: Backend Developer (Python)
+        description:
+          type: string
+          example: I am ready to join your team!
+        creation_date:
+          type: string
+          example: 31/01/1900
+        user_id:
+          type: integer
+          example: 1
+    RelatedAdvs:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 1
+        total:
+          type: integer
+          example: 100
+        total_pages:
+          type: integer
+          example: 10
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Advertisement'
+  securitySchemes:
+    jwt_auth:
+      type: apiKey
+      in: header
+      name: Authorization
