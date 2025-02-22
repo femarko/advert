@@ -5,6 +5,17 @@ from app.domain import errors, services, models
 from app.repository.filtering import FilterTypes, UserColumns, AdvertisementColumns, Comparison
 
 
+def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
+    validated_data = validate_func(**user_data)
+    validated_data["password"] = hash_pass_func(password=validated_data["password"])
+    user = services.create_user(**validated_data)
+    with uow:
+        uow.users.add(user)
+        uow.commit()
+        user_id: int = user.id
+        return user_id
+
+
 def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     current_user_id: int = check_current_user_func(user_id=user_id, get_cuid=True)
     with uow:
@@ -15,15 +26,6 @@ def get_user_data(user_id: int, check_current_user_func: Callable, uow):
     raise errors.NotFoundError(message_prefix="The user")
 
 
-def create_user(user_data: dict[str, str], validate_func: Callable, hash_pass_func: Callable, uow):
-    validated_data = validate_func(**user_data)
-    validated_data["password"] = hash_pass_func(password=validated_data["password"])
-    user = services.create_user(**validated_data)
-    with uow:
-        uow.users.add(user)
-        uow.commit()
-        user_id: int = user.id
-        return user_id
 
 
 def update_user(user_id: int, check_current_user_func: Callable, validate_func: Callable,
@@ -39,6 +41,20 @@ def update_user(user_id: int, check_current_user_func: Callable, validate_func: 
         uow.commit()
         updated_user_params = services.get_params(model=updated_user)
         return updated_user_params
+
+
+def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
+    current_user_id: int = check_current_user_func(user_id=user_id)
+    with uow:
+        user_to_delete: models.User = uow.users.get(current_user_id)
+        if not user_to_delete:
+            raise errors.NotFoundError
+        deleted_user_params: dict[str, str | int] = services.get_params(model=user_to_delete)
+        uow.users.delete(user_to_delete)
+        uow.commit()
+    return deleted_user_params
+
+
 
 
 def get_related_advs(
@@ -57,18 +73,6 @@ def get_related_advs(
     raise errors.NotFoundError(base_message="The related advertisements are not found.")
 
 
-def delete_user(user_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
-    current_user_id: int = check_current_user_func(user_id=user_id)
-    with uow:
-        user_to_delete: models.User = uow.users.get(current_user_id)
-        if not user_to_delete:
-            raise errors.NotFoundError
-        deleted_user_params: dict[str, str | int] = services.get_params(model=user_to_delete)
-        uow.users.delete(user_to_delete)
-        uow.commit()
-    return deleted_user_params
-
-
 def create_adv(get_auth_user_id_func: Callable, validate_func: Callable, adv_params: dict[str, str | int], uow) -> int:
     authenticated_user_id: int = get_auth_user_id_func()
     validated_data = validate_func(**adv_params)
@@ -78,41 +82,6 @@ def create_adv(get_auth_user_id_func: Callable, validate_func: Callable, adv_par
         uow.advs.add(adv)
         uow.commit()
         return adv.id
-
-
-def update_adv(
-        adv_id: int, new_params: dict, check_current_user_func: Callable, validate_func: Callable, uow
-) -> dict[str, str | int]:
-    with uow:
-        adv: models.Advertisement = uow.advs.get(instance_id=adv_id)
-        if not adv:
-            raise errors.NotFoundError(message_prefix="The advertisement")
-        check_current_user_func(user_id=adv.user_id)
-        validated_data: dict[str, str] = validate_func(**new_params)
-        updated_adv: models.Advertisement = services.update_instance(instance=adv, new_attrs=validated_data)
-        uow.advs.add(updated_adv)
-        uow.commit()
-        updated_adv_params: dict = services.get_params(model=updated_adv)
-        return updated_adv_params
-
-
-def get_users_list(column: UserColumns, column_value: str | int | datetime, uow) -> list[models.User]:
-    with uow:
-        results = uow.users.get_list_or_paginated_data(filter_type=FilterTypes.COLUMN_VALUE,
-                                                       comparison=Comparison.IS,
-                                                       column=column,
-                                                       column_value=column_value)
-        return results
-
-
-def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
-    with uow:
-        adv: models.Advertisement = uow.advs.get(instance_id=adv_id)
-    try:
-        check_current_user_func(user_id=adv.user_id)
-        return services.get_params(model=adv)
-    except AttributeError:
-        raise errors.NotFoundError(message_prefix="The advertisement")
 
 
 def search_advs_by_text(
@@ -133,6 +102,32 @@ def search_advs_by_text(
         {params_dict["title"]: params_dict["description"]} for params_dict in paginated_res["items"]
     ]
     return paginated_res
+
+
+def get_adv_params(adv_id: int, check_current_user_func: Callable, uow) -> dict[str, str | int]:
+    with uow:
+        adv: models.Advertisement = uow.advs.get(instance_id=adv_id)
+    try:
+        check_current_user_func(user_id=adv.user_id)
+        return services.get_params(model=adv)
+    except AttributeError:
+        raise errors.NotFoundError(message_prefix="The advertisement")
+
+
+def update_adv(
+        adv_id: int, new_params: dict, check_current_user_func: Callable, validate_func: Callable, uow
+) -> dict[str, str | int]:
+    with uow:
+        adv: models.Advertisement = uow.advs.get(instance_id=adv_id)
+        if not adv:
+            raise errors.NotFoundError(message_prefix="The advertisement")
+        check_current_user_func(user_id=adv.user_id)
+        validated_data: dict[str, str] = validate_func(**new_params)
+        updated_adv: models.Advertisement = services.update_instance(instance=adv, new_attrs=validated_data)
+        uow.advs.add(updated_adv)
+        uow.commit()
+        updated_adv_params: dict = services.get_params(model=updated_adv)
+        return updated_adv_params
 
 
 def delete_adv(adv_id: int, get_auth_user_id_func: Callable, uow) -> dict[str, str | int]:
